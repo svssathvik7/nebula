@@ -9,9 +9,15 @@ from .tracking import METRICS
 MAX_PAYLOAD_BYTES = 8 * 1024 * 1024
 
 
+def encode_payload(report):
+    encoded = json.dumps(report, ensure_ascii=False, separators=(',', ':'))
+    encoded = encoded.replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
+    return encoded.replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
+
+
 def bound_payload(report, *, max_bytes=MAX_PAYLOAD_BYTES):
     def size():
-        return len(json.dumps(report, ensure_ascii=False, separators=(',', ':')).encode('utf-8'))
+        return len(encode_payload(report).encode('utf-8'))
     if size() <= max_bytes:
         return report
     report['warnings'].append('Report detail truncated to fit the payload budget; aggregate totals retained')

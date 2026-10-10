@@ -5,7 +5,7 @@ import re
 import tempfile
 import unittest
 from unittest.mock import patch
-from nebula.analytics.report import build_report
+from nebula.analytics.report import build_report, bound_payload
 from nebula.analytics.render import render_html, write_report
 
 
@@ -63,3 +63,14 @@ class RenderTests(unittest.TestCase):
             report['warnings'] = ['x'*(8*1024*1024)]
             with self.assertRaises(ValueError):
                 render_html(report)
+
+    def test_payload_budget_includes_script_safe_encoding(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            report = build_report(Path(temporary))
+            report['nebulas'] = [{'available': True, 'coverage': {'details_complete': True},
+                                  'activity': [], 'lessons': ['<'*1500], 'metric_rows': []}]
+            bound_payload(report, max_bytes=2500)
+            document = render_html(report)
+            encoded = re.search(r'<script id="nebula-data" type="application/json">(.*?)</script>', document, re.S).group(1)
+            self.assertLessEqual(len(encoded.encode()), 2500)
+            self.assertFalse(report['nebulas'][0]['coverage']['details_complete'])

@@ -1,18 +1,15 @@
 """Bundle an offline dashboard and publish a new private file without replacing one."""
 from datetime import datetime, timezone
-import json
 import os
 from pathlib import Path
 import tempfile
-from .report import MAX_PAYLOAD_BYTES
+from .report import MAX_PAYLOAD_BYTES, encode_payload
 
 TEMPLATES = Path(__file__).parent / 'templates'
 
 
 def render_html(report):
-    encoded = json.dumps(report, ensure_ascii=False, separators=(',', ':'))
-    encoded = encoded.replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
-    encoded = encoded.replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
+    encoded = encode_payload(report)
     if len(encoded.encode('utf-8')) > MAX_PAYLOAD_BYTES:
         raise ValueError('Encoded report exceeds payload budget')
     document = (TEMPLATES / 'dashboard.html').read_text(encoding='utf-8')
