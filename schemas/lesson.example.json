@@ -1,0 +1,1 @@
+{"action":"Place the module in src/modules.","context_tags":["module"],"disabled":false,"evidence_ids":["replace-with-captured-event-id"],"exceptions":[],"kind":"convention","lesson_id":"layout","rationale":"Keep modules together.","rationale_source":"inferred","scope_projects":[],"trigger":"when adding a module","version":1}
