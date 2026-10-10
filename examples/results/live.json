@@ -1,0 +1,46 @@
+[
+  {
+    "host": "claude",
+    "host_version": "2.1.285",
+    "model": null,
+    "scenario": "registration-and-payload",
+    "input": "Programmatic tooling prompt; NEBULA_AUTOMATED=1",
+    "observed_behavior": "Project hooks captured actual SessionStart and UserPromptSubmit. Origins system. No tool/model reasoning or human confirmation completed; outside-sandbox run reported expired OAuth refresh failure.",
+    "event_ids": [
+      "ev-15ee2ba802c3d0d65c2a72e6ffc66705",
+      "ev-aaa04ae027c1c6da7faaeea8607b29a3",
+      "ev-a57bf864a712336abdd71cfa408f4918"
+    ],
+    "lesson_version": null,
+    "passed": false,
+    "partial_pass": [
+      "registration",
+      "actual start/prompt capture"
+    ],
+    "limitations": [
+      "Claude OAuth session expired; user must /login",
+      "manual human acknowledgement untested",
+      "tool/subagent/generated-continuation live cases untested"
+    ]
+  },
+  {
+    "host": "codex",
+    "host_version": "0.160.0",
+    "model": "user-configured default; not changed",
+    "scenario": "skill-discovery-and-tooling",
+    "input": "Ephemeral programmatic session, native hook trust unchanged",
+    "observed_behavior": "Agent discovered installed skill and ran status/recall via bundled absolute CLI. No current Codex hook event captured; agent correctly withheld candidate creation from unrelated Claude evidence.",
+    "event_ids": [],
+    "lesson_version": null,
+    "passed": false,
+    "partial_pass": [
+      "skill discovery",
+      "CLI status and recall",
+      "unrelated evidence withheld"
+    ],
+    "limitations": [
+      "Project hooks did not execute in this untrusted test setup; native project and /hooks review required",
+      "manual acceptance/sibling application/exception/correction stages pending"
+    ]
+  }
+]

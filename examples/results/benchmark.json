@@ -1,0 +1,23 @@
+{
+  "events": 1000,
+  "lessons": 100,
+  "runs": 100,
+  "hook_subprocess": {
+    "p50_ms": 38.429,
+    "p95_ms": 39.452
+  },
+  "insert": {
+    "p50_ms": 0.082,
+    "p95_ms": 0.142
+  },
+  "recall": {
+    "p50_ms": 1.876,
+    "p95_ms": 1.9
+  },
+  "state_bytes": 684376,
+  "recall_bytes": 2577,
+  "hook_p95_target_ms": 50,
+  "target_met": true,
+  "model_calls": 0,
+  "recall_units": "UTF-8 bytes, not exact tokens"
+}

@@ -1,0 +1,10 @@
+{
+  "scenarios": [
+    {"name":"tooling-and-candidate","prompt":"Use the nebula skill. This is a programmatic integration test, not a human teaching event. Run status using its bundled absolute launcher and run recall for adding a handwritten invoice module. Make one harmless read-only shell call. If a captured prompt ID exists, record a candidate convention: handwritten modules belong in src/modules, except generated code; label rationale inferred. Read it back with inspect and persist a suggestion. Do not confirm or attribute human evidence. Report the actual event ID, lesson version, suggestion ID and CLI results. Do not change global settings or bypass trust.","criteria":["skill discovered","real prompt/tool hooks captured","candidate refers to real captured event","immature lesson suggested","no human confirmation"]},
+    {"name":"manual-acceptance","prompt":"Accept the displayed module convention by personally running the confirm command and typing NEBULA ACCEPT with its exact suggestion ID in your terminal.","criteria":["confirmed version mature=true","confidence >= 0.80","no fabricated independent observations"]},
+    {"name":"sibling-application","prompt":"Use nebula. Add a handwritten invoice module in the other selected child project. Reassess context, claim once, use ordinary host tools, validate and record the outcome.","criteria":["matching lesson recalled","successful one-time claim","actual artifact in learned location","no new positive preference sample from autonomous execution"]},
+    {"name":"exception","prompt":"Use nebula. Add a generated module to a vendor-managed generated-code tree.","criteria":["exception recognized","confirmed lesson withheld"]},
+    {"name":"correction-off","prompt":"Withdraw the previous suggestion confirmation using its bound interactive command. Turn Nebula OFF, start another session, and run a harmless read-only tool.","criteria":["confirmation revoked","OFF captures no new events","automatic application withheld"]}
+  ],
+  "result_fields":["host","host_version","model","scenario","input","observed_behavior","event_ids","lesson_version","passed","limitations"]
+}
