@@ -7,6 +7,13 @@ child separately so nested Git boundaries do not hide the parent skill.
 Registration preserves unrelated configuration and creates no user-wide settings
 or trust records. A fresh session and native host trust review may be required.
 
+The shared skill also routes `stats` to the bundled local engine. Reports need
+no host hooks, model calls, frontend build or running server. Normal engine use
+upgrades valid older state to schema 3 with zero initial analytics counters;
+stats reads schemas 1/2/3 without upgrading or enabling them. The dashboard is
+an on-demand file snapshot, not background monitoring. See
+[analytics semantics](analytics.md) for coverage and privacy.
+
 Commands run the selected absolute Python interpreter and a quoted absolute
 launcher. Both adapters ingest SessionStart/UserPromptSubmit/PreToolUse/
 PostToolUse/Stop. Tool matchers capture all tool names because namespaces differ

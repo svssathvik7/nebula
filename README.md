@@ -86,6 +86,67 @@ it reconstructs confirmation only from matching captured receipt/suggestion.
 Missing/corrupt/full state withholds learned application and leaves ordinary host
 work running.
 
+## Multi-Nebula stats
+
+From a folder containing several independent Nebulas, ask your agent for
+“nebula stats”, or run:
+
+```sh
+python3 "$NEBULA_ENGINE" stats --root /path/to/projects --open
+# Choose a new output filename; existing files are never overwritten.
+python3 "$NEBULA_ENGINE" stats --root /path/to/projects --output /path/to/report.html
+```
+
+The requested ancestor need not be a Nebula. With no `--root`, the command scans
+the current folder. It generates a standalone, interactive HTML report; `--open`
+opens the saved file in your browser. It works while Nebula is OFF and needs no
+initialization or host configuration. Browser-opening failures leave the report
+available at the returned path. The command prints only compact coverage and
+warnings, keeping lesson data out of agent context.
+
+The dashboard shows learned triggers, actions, contexts, exceptions and rationale;
+current maturity/confidence; selected projects; lesson versions; feedback counts;
+successful, failed, unknown and unfinished applications; retained recent activity;
+and storage/coverage. Filter details by Nebula, actual project, lesson kind,
+maturity and text. Global summary cards remain global. Confidence measures
+preference consistency. A suitable recorded application counts as successful;
+time saved requires a manual-work baseline and is deferred.
+
+Schema 3 stores compact counters in the same transactions as suggestions,
+feedback and applications. Suggestion replays, repeat verdicts and completion
+replays do not inflate counts. Acceptance is distinct from execution. Counters
+survive raw history expiry and start at analytics initialization, with no
+historical backfill. Normal engine use upgrades valid older state; stats reads
+schemas 1/2/3 without migration. Older roots show analytics uninitialized and
+partial retained history. Unavailable roots show diagnostics rather than zero
+activity. Each root is read consistently, at its own snapshot time.
+
+Discovery skips `.git`, `.nebula`, `.nebula-reports`, `.superpowers`, `.venv`,
+`venv`, `node_modules`, `target`, `dist`, `build` and `__pycache__`, and does not
+follow descendant directory symlinks. It stops at 10,000 directories, 100,000
+entries, depth 12 or 100 candidate roots. Details are capped at 1,000 lesson
+versions and 100 activity records per root; the payload is capped at 8 MiB.
+Limits and read failures produce visible coverage warnings. Aggregate counts
+use the full available state even when details are truncated.
+
+Reports use no remote assets and need no server or frontend dependencies. They
+contain local paths, lesson text and retained human reasons. New files are
+owner-only; output collisions, symlink paths and `.nebula` destinations are
+refused. Inspect reports before sharing and regenerate them to refresh data.
+Automatically named reports are ignored by Git; custom output names require
+your own ignore rules.
+
+For a synthetic preview and reproducible local measurements:
+
+```sh
+python3 examples/analytics_demo.py --output /path/to/new-report.html
+python3 scripts/benchmark_analytics.py --runs 100
+```
+
+The benchmark compares the same schema/workflow with analytics instrumentation
+enabled and disabled. It measures local bookkeeping and report generation, not
+user time saved or a historical release. See [analytics semantics](skills/nebula/references/analytics.md).
+
 Local benchmark: 1,000 events, 100 lessons, 100 hook subprocess runs including
 Python cold start: p50 **38.429 ms**, p95 **39.452 ms** (50 ms target met); in-process
 insertion p95 .142 ms; recall p95 1.900 ms; state 684,376 bytes; shortlist 2,577
