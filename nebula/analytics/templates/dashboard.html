@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nebula analytics</title>
+  <link rel="icon" href="data:,">
+  <style>@@CSS@@</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="brand-icon" aria-hidden="true">✦</span> NEBULA <span class="tag">ANALYTICS</span></div>
+  <p class="eyebrow">YOUR LEARNING, IN VIEW</p>
+  <h1>A clearer view of what sticks.</h1>
+  <p class="intro">Explore learned preferences, your feedback, and recorded applications across your projects.</p>
+  <p id="snapshot" class="subtle"></p>
+</header>
+<main>
+  <section id="notices" aria-label="Report coverage"></section>
+  <section id="summary" class="metrics" aria-label="Overview"></section>
+  <section class="explore" aria-labelledby="explore-title">
+    <div class="section-heading"><div><p class="eyebrow">EXPLORE THE DETAILS</p><h2 id="explore-title">Your Nebulas</h2></div><span id="result-count" class="subtle" role="status"></span></div>
+    <div class="filters">
+      <label>Nebula<select id="nebula-filter"><option value="">All Nebulas</option></select></label>
+      <label>Project<select id="project-filter"><option value="">All projects</option></select></label>
+      <label>Lesson type<select id="kind-filter"><option value="">All types</option><option>preference</option><option>convention</option><option>decision-heuristic</option><option>workflow</option></select></label>
+      <label>Maturity<select id="maturity-filter"><option value="">All lessons</option><option value="true">Mature</option><option value="false">Learning</option></select></label>
+      <label class="search">Search lessons<input id="search" type="search" placeholder="Scenario, action, rationale…"></label>
+    </div>
+    <div id="nebulas"></div>
+  </section>
+</main>
+<footer>This is a private local snapshot. Paths and preferences may be sensitive. Successful applications are recorded outcomes, not measured time savings. Confidence is a consistency score, not a probability of correctness.</footer>
+<noscript><p class="notice">Enable JavaScript in your browser to view the embedded local report. It makes no network requests.</p></noscript>
+<script id="nebula-data" type="application/json">@@DATA@@</script>
+<script>@@JS@@</script>
+</body>
+</html>
