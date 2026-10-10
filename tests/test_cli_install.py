@@ -77,7 +77,7 @@ class InstallTests(unittest.TestCase):
 
 class CliTests(unittest.TestCase):
     def run_cli(self,*args,input=None):
-        return subprocess.run([sys.executable,str(RUNTIME/'scripts/nebula.py'),*map(str,args)],input=input,text=True,capture_output=True,cwd='/private/tmp')
+        return subprocess.run([sys.executable,str(RUNTIME/'scripts/nebula.py'),*map(str,args)],input=input,text=True,capture_output=True,cwd=tempfile.gettempdir())
 
     def test_cli_on_off_status_absolute_and_untrusted_observe(self):
         with workspace() as (root,a,b):
@@ -100,5 +100,5 @@ class CliTests(unittest.TestCase):
         for required in ('NEBULA ACCEPT','record-lesson','application','unknown','recall','0.75','inferred','confirm'):
             self.assertIn(required,text)
         self.assertEqual(self.run_cli('record-lesson','--root','/missing','--stdin',input='{}').returncode,1)
-        result=subprocess.run([sys.executable,str(RUNTIME/'skills/nebula/scripts/nebula.py'),'--help'],cwd='/private/tmp',capture_output=True)
+        result=subprocess.run([sys.executable,str(RUNTIME/'skills/nebula/scripts/nebula.py'),'--help'],cwd=tempfile.gettempdir(),capture_output=True)
         self.assertEqual(result.returncode,0)

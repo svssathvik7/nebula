@@ -1,4 +1,4 @@
-import json,subprocess,sys,unittest
+import json,subprocess,sys,tempfile,unittest
 from pathlib import Path
 from dataclasses import replace,asdict
 from datetime import timedelta
@@ -185,7 +185,7 @@ m.install(m.plan_install(Path(sys.argv[1]),[Path(sys.argv[2])],['claude'],Path(s
         with workspace() as (root,a,b):
             with self.state(root,a,b)[0]: pass
             maintain(root,now='2026-10-22T00:00:00Z')
-            result=subprocess.run([sys.executable,str(RUNTIME/'scripts/nebula.py'),'inspect','--root',str(root),'--lesson','layout'],cwd='/private/tmp',capture_output=True,text=True)
+            result=subprocess.run([sys.executable,str(RUNTIME/'scripts/nebula.py'),'inspect','--root',str(root),'--lesson','layout'],cwd=tempfile.gettempdir(),capture_output=True,text=True)
             self.assertEqual(result.returncode,0,result.stderr)
             data=json.loads(result.stdout)
             self.assertEqual(data['sample_provenance'][0]['source_digest'],'digest-1')
