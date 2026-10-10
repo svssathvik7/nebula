@@ -104,12 +104,18 @@ def snapshot_nebula(root, *, lesson_limit=1000, activity_limit=100):
                 if db.execute('SELECT count(*) FROM analytics_counters').fetchone()[0] > row_limit:
                     result['coverage']['details_complete'] = False
                     result['warnings'].append('Project/version metric detail capped; global counters remain complete')
-            for row in db.execute('SELECT timestamp,kind,data FROM audit ORDER BY id DESC LIMIT ?', (activity_limit,)):
+            activity_rows = list(db.execute('SELECT timestamp,kind,data FROM audit ORDER BY id DESC LIMIT ?', (activity_limit + 1,)))
+            if len(activity_rows) > activity_limit:
+                result['coverage']['details_complete'] = False
+                result['warnings'].append(f'Recent activity capped at {activity_limit} retained records; older retained activity omitted')
+            for row in activity_rows[:activity_limit]:
                 data = json.loads(row['data'])
+                if not isinstance(data, dict):
+                    raise StateUnavailable('invalid audit record: expected a JSON object')
                 suggestion_id = data.get('suggestion_id', data.get('id'))
                 pending = store.get_suggestion(suggestion_id) if suggestion_id else None
                 result['activity'].append({'timestamp': row['timestamp'], 'kind': row['kind'],
-                                           'data': data, 'project': pending.project if pending else None})
+                                           'data': data, 'project': data.get('project') or (pending.project if pending else None)})
             result['retained_suggestion_states'] = {row[0] or 'unknown': row[1] for row in db.execute("SELECT json_extract(data,'$.status'),count(*) FROM suggestions GROUP BY 1")}
             return result
     except (OSError, ValueError, TypeError, KeyError, sqlite3.Error, StateUnavailable) as exc:

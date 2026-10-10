@@ -116,3 +116,40 @@ class ReportTests(unittest.TestCase):
             self.assertFalse(snapshot_nebula(root)['available'])
             (b / '.nebula').symlink_to(root / '.nebula', target_is_directory=True)
             self.assertFalse(snapshot_nebula(b)['available'])
+
+    def test_malformed_audit_root_preserves_healthy_results(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            ancestor = Path(temporary).resolve()
+            for name in ('bad', 'healthy'):
+                root = ancestor/name; child = root/'project'; child.mkdir(parents=True)
+                init_nebula(root, [child])
+                with Store(root) as store:
+                    store.put_lesson(lesson())
+                    if name == 'bad': store.audit('malformed', [])
+            report = build_report(ancestor)
+            self.assertEqual(report['summary']['available_nebulas'], 1)
+            bad = next(n for n in report['nebulas'] if not n['available'])
+            self.assertIn('audit', bad['diagnostic'])
+
+    def test_application_activity_has_execution_project(self):
+        from examples.analytics_demo import seed
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()/'nebula'; seed(root)
+            report = snapshot_nebula(root)
+            executions = [a for a in report['activity'] if a['kind'] in ('application-claim','application-finish')]
+            self.assertEqual(len(executions), 6)
+            self.assertEqual({a['project'] for a in executions}, {str(root/'indexer')})
+            # Historical rows without project identity are deliberately unresolved.
+            with Store(root) as store:
+                store.audit('application-claim', {'lesson_id':'validation','version':1,'episode_id':'old'})
+            self.assertIsNone(snapshot_nebula(root)['activity'][0]['project'])
+
+    def test_recent_activity_cap_marks_detail_coverage(self):
+        with workspace() as (root, a, b):
+            init_nebula(root, [a, b])
+            with Store(root) as store:
+                for i in range(101): store.audit('retained', {'sequence':i})
+            report = snapshot_nebula(root)
+            self.assertEqual(len(report['activity']), 100)
+            self.assertFalse(report['coverage']['details_complete'])
+            self.assertTrue(any('activity' in w.lower() for w in report['warnings']))
