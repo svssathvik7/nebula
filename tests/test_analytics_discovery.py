@@ -64,3 +64,20 @@ class DiscoveryTests(unittest.TestCase):
             self.assertEqual(discover_roots(root)['roots'], [])
             (root / '.nebula').write_text('malformed')
             self.assertEqual(discover_roots(root)['roots'], [root])
+
+    def test_queued_directory_changed_to_symlink_is_incomplete(self):
+        import os
+        with tempfile.TemporaryDirectory() as temporary:
+            ancestor = Path(temporary).resolve()
+            a = self.create(ancestor/'a'); b = self.create(ancestor/'b')
+            real_scan = os.scandir
+            def changing_scan(path):
+                if path == a:
+                    b.rename(ancestor/'moved')
+                    b.symlink_to(ancestor/'moved', target_is_directory=True)
+                return real_scan(path)
+            with patch('nebula.analytics.discovery.os.scandir', side_effect=changing_scan):
+                result = discover_roots(ancestor)
+            self.assertEqual(result['roots'], [a])
+            self.assertFalse(result['complete'])
+            self.assertTrue(any(str(b) in warning for warning in result['warnings']))

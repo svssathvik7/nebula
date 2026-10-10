@@ -25,6 +25,8 @@ def discover_roots(root, *, max_directories=10000, max_depth=12,
         result['visited'] += 1
         try:
             if directory.is_symlink():
+                result['complete'] = False
+                result['warnings'].append(f'Cannot inspect {directory}: directory changed to a symlink during discovery')
                 continue
             state = directory / '.nebula'
             if state.exists() or state.is_symlink():
