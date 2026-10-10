@@ -49,7 +49,7 @@ byId("notices").append(notice(`Overview covers ${report.summary.available_nebula
 if (!report.discovery.complete) byId("notices").append(notice("Discovery is incomplete. Some Nebulas may be absent.",true));
 for (const warning of [...report.discovery.warnings,...report.warnings]) byId("notices").append(notice(warning,true));
 function render() {
-  const selected = byId("nebula-filter").value, project = byId("project-filter").value, kind = byId("kind-filter").value, maturity = byId("maturity-filter").value, search = byId("search").value.trim().toLowerCase();
+  const selected = byId("nebula-filter").value, project = byId("project-filter").value, kind = byId("kind-filter").value, maturity = byId("maturity-filter").value, versions = byId("version-filter").value, search = byId("search").value.trim().toLowerCase();
   byId("nebulas").replaceChildren(); let visibleLessons=0, visibleNebulas=0;
   for (const n of report.nebulas) {
     if (selected && n.root!==selected) continue;
@@ -61,7 +61,7 @@ function render() {
     if (!n.coverage.details_complete) card.append(notice("Details are truncated. Global counters remain complete; filtered counts may be incomplete.",true));
     for (const warning of n.warnings) card.append(notice(warning,true));
     if (n.tracked_metrics) card.append(bars(project ? sumRows(n.metric_rows.filter(r=>r.project===project)) : n.tracked_metrics));
-    const lessons = n.lessons.filter(r => (!kind || r.lesson.kind===kind) && (!maturity || String(r.score.mature)===maturity) && (!project || !r.lesson.scope_projects.length || r.lesson.scope_projects.includes(project)) && (!search || [r.lesson.action,r.lesson.trigger,r.lesson.rationale,...r.lesson.context_tags,...r.lesson.exceptions].join(" ").toLowerCase().includes(search)));
+    const lessons = n.lessons.filter(r => (versions==="all" || (versions==="current" ? r.is_current : !r.is_current)) && (!kind || r.lesson.kind===kind) && (!maturity || String(r.score.mature)===maturity) && (!project || !r.lesson.scope_projects.length || r.lesson.scope_projects.includes(project)) && (!search || [r.lesson.action,r.lesson.trigger,r.lesson.rationale,...r.lesson.context_tags,...r.lesson.exceptions].join(" ").toLowerCase().includes(search)));
     for (const record of lessons) card.append(lessonCard(record,n,project));
     visibleLessons += lessons.length;
     if (!lessons.length) card.append(node("p","No lesson details match these filters.","empty"));
@@ -75,5 +75,5 @@ function render() {
   if (!visibleNebulas) byId("nebulas").append(node("p","No Nebulas found in this view. Enable a Nebula in related child projects, then generate a fresh report.","empty"));
   byId("result-count").textContent=`${visibleNebulas} Nebulas · ${visibleLessons} lesson versions shown`;
 }
-for (const id of ["nebula-filter","project-filter","kind-filter","maturity-filter","search"]) byId(id).addEventListener("input",render);
+for (const id of ["nebula-filter","project-filter","kind-filter","maturity-filter","version-filter","search"]) byId(id).addEventListener("input",render);
 render();

@@ -109,7 +109,9 @@ current maturity/confidence; selected projects; lesson versions; feedback counts
 successful, failed, unknown and unfinished applications; retained recent activity;
 and storage/coverage. Filter details by Nebula, actual project, lesson kind,
 maturity and text. Global summary cards remain global. Confidence measures
-preference consistency. A suitable recorded application counts as successful;
+preference consistency. The default lesson view shows current versions; switch
+Versions to inspect older versions or all versions together.
+A suitable recorded application counts as successful;
 time saved requires a manual-work baseline and is deferred.
 
 Schema 3 stores compact counters in the same transactions as suggestions,
@@ -142,6 +144,11 @@ For a synthetic preview and reproducible local measurements:
 python3 examples/analytics_demo.py --output /path/to/new-report.html
 python3 scripts/benchmark_analytics.py --runs 100
 ```
+
+For browser regression checks, evaluate the function in
+`examples/analytics_browser_checks.js` in the console of a fresh synthetic
+report. It checks the current-version default, version history and project
+activity, then restores the filters.
 
 The benchmark compares the same schema/workflow with analytics instrumentation
 enabled and disabled. It measures local bookkeeping and report generation, not

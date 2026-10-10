@@ -25,6 +25,8 @@ never migrates, maintains, checkpoints or enables state. Snapshots are consisten
 within each root; different roots are read at different instants. Detail filters
 do not change global summary cards. Project counters use recorded project rows,
 not the lesson's eligible scope. Coverage notices mark truncated details.
+Current versions are shown by default; the Versions control exposes older or
+all versions without changing global counters.
 
 Discovery skips dependencies/build/state directories and descendant directory
 symlinks. Budgets: 10,000 directories, 100,000 entries, depth 12, 100 candidate
