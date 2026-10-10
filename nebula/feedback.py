@@ -3,6 +3,7 @@ from dataclasses import replace
 from .models import Suggestion, Sample, digest, validate, timestamp, dump
 from .roots import read_config
 from .scoring import current_score, penalty_key, rejection_count
+from .analytics.tracking import increment, record_feedback
 
 VERDICTS={'accept','reject','exception','correct','withdraw','disable'}
 
@@ -86,6 +87,7 @@ def suggest(store,lesson,*,session_id,episode_id,project,context_digest,now):
         old=store.get_suggestion(key)
         if old: return old
         store.put_suggestion(value)
+        increment(store.connection,lesson_id=lesson.lesson_id,version=lesson.version,project=project,metric='suggestions')
         store.audit('suggestion',{'id':key})
     return value
 
@@ -139,5 +141,6 @@ def apply_feedback(store,*,suggestion_id,source_event_id,verdict,now,reason=None
             store.put_sample(Sample(value.lesson_id,value.version,pending.episode_id,pending.session_id,pending.project,source_event_id,
                                     'positive' if verdict=='accept' else 'negative','unknown',source.timestamp),essential=True,provenance={'source_event_id':source_event_id,'source_digest':source.digest,'source_timestamp':source.timestamp,'origin':'human','host':source.host,'verdict':'positive' if verdict=='accept' else 'negative','outcome':'unknown','receipt':store.receipt(source_event_id)})
         store.set_meta(applied_key,{'suggestion_id':suggestion_id,'verdict':verdict})
+        record_feedback(store.connection,pending,verdict)
         store.audit('feedback',{'suggestion_id':suggestion_id,'source':source_event_id,'verdict':verdict})
         return current_score(store,value,now=now)

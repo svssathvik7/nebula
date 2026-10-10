@@ -4,6 +4,11 @@ from unittest.mock import patch
 from nebula.lifecycle import init_nebula
 from nebula.store import Store, StateUnavailable
 from nebula.models import timestamp
+from nebula.feedback import suggest, apply_feedback
+from nebula.application import claim_application, finish_application
+from nebula.lifecycle import set_enabled
+from nebula.maintenance import prune
+from tests.support import event, NOW
 from nebula.analytics.tracking import increment, read_counters
 from tests.support import workspace, lesson
 
@@ -72,3 +77,95 @@ class TrackingTests(unittest.TestCase):
                 store.connection.execute('PRAGMA user_version=2')
             with self.assertRaises(StateUnavailable):
                 Store(root)
+
+
+class TransitionTests(unittest.TestCase):
+    def pending(self, store, project, *, episode='e1'):
+        value = lesson()
+        store.put_lesson(value)
+        return suggest(store, value, session_id='s1', episode_id=episode,
+                       project=str(project), context_digest='context', now=NOW)
+
+    def feedback(self, store, pending, verdict, key, reason=None):
+        source = event(event_id=key, digest=key, project=pending.project,
+                       session_id=pending.session_id, episode_id=pending.episode_id)
+        store.put_event(source)
+        receipt = {'verb': verdict, 'suggestion_id': pending.suggestion_id}
+        if reason is not None:
+            receipt['reason'] = reason
+        store.put_receipt(key, 'verified-host-submission', receipt)
+        return apply_feedback(store, suggestion_id=pending.suggestion_id,
+                              source_event_id=key, verdict=verdict, reason=reason, now=NOW)
+
+    def test_suggestion_and_feedback_replay_deduplicate_categories(self):
+        with workspace() as (root, a, b):
+            init_nebula(root, [a, b])
+            with Store(root) as store:
+                pending = self.pending(store, a)
+                self.assertEqual(self.pending(store, a), pending)
+                self.feedback(store, pending, 'accept', 'accept')
+                self.feedback(store, pending, 'accept', 'accept')
+                self.feedback(store, pending, 'reject', 'reject')
+                store.bound_raw_events('2026-11-01T00:00:00Z')
+                self.feedback(store, pending, 'reject', 'repeat')
+                self.feedback(store, pending, 'exception', 'exception', 'one-off route')
+                self.feedback(store, pending, 'exception', 'exception-new', 'another route')
+                self.feedback(store, pending, 'withdraw', 'withdraw')
+                self.feedback(store, pending, 'correct', 'correct')
+                self.feedback(store, pending, 'disable', 'disable')
+                counters = read_counters(store.connection)
+                for metric in ('suggestions','accepted','rejected','exceptions','withdrawn','corrected','disabled'):
+                    self.assertEqual(counters[metric], 1, metric)
+                self.assertEqual(counters['claims'], 0)
+
+    def test_outcomes_only_count_first_completion_and_survive_retention(self):
+        for outcome, metric in (('suitable','successful'), ('failed','failed'), ('unknown','unknown')):
+            with self.subTest(outcome=outcome), workspace() as (root, a, b):
+                init_nebula(root, [a, b]); set_enabled(root, True)
+                with Store(root) as store:
+                    pending = self.pending(store, a)
+                    self.feedback(store, pending, 'accept', 'accept')
+                    fields = dict(lesson_id='layout', version=1, session_id='s1', episode_id='execution')
+                    self.assertTrue(claim_application(store, **fields, project=str(b), context_match=True, permissions_ok=True))
+                    self.assertFalse(claim_application(store, **fields, project=str(b), context_match=True, permissions_ok=True))
+                    store.put_event(event(event_id='outcome', project=str(b)))
+                    finish_application(store, **fields, outcome=outcome, source_event_ids=['outcome'])
+                    finish_application(store, **fields, outcome=outcome, source_event_ids=['outcome'])
+                    self.assertEqual(read_counters(store.connection, project=str(b))['claims'], 1)
+                    self.assertEqual(read_counters(store.connection, project=str(b))[metric], 1)
+                    before = read_counters(store.connection)
+                    with store.transaction():
+                        prune(store, '2028-01-01T00:00:00Z')
+                    self.assertEqual(read_counters(store.connection), before)
+
+    def test_counter_failure_rolls_back_feedback_and_claim(self):
+        with workspace() as (root, a, b):
+            init_nebula(root, [a, b]); set_enabled(root, True)
+            with Store(root) as store:
+                pending = self.pending(store, a)
+                with patch('nebula.feedback.record_feedback', side_effect=RuntimeError('counter interrupted')):
+                    with self.assertRaises(RuntimeError):
+                        self.feedback(store, pending, 'accept', 'accept')
+                self.assertFalse(store.confirmed('layout', 1))
+                self.assertEqual(store.get_suggestion(pending.suggestion_id).status, 'pending')
+                self.feedback(store, pending, 'accept', 'accept')
+                with patch('nebula.application.increment', side_effect=RuntimeError('counter interrupted')):
+                    with self.assertRaises(RuntimeError):
+                        claim_application(store, lesson_id='layout', version=1, session_id='s1',
+                                          episode_id='apply', project=str(a), context_match=True, permissions_ok=True)
+                self.assertIsNone(store.application('layout', 1, 's1', 'apply'))
+
+    def test_two_writers_count_one_claim(self):
+        from concurrent.futures import ThreadPoolExecutor
+        with workspace() as (root, a, b):
+            init_nebula(root, [a, b]); set_enabled(root, True)
+            with Store(root) as store:
+                self.feedback(store, self.pending(store, a), 'accept', 'accept')
+            def claim():
+                with Store(root) as store:
+                    return claim_application(store, lesson_id='layout', version=1, session_id='s1',
+                                             episode_id='apply', project=str(a), context_match=True, permissions_ok=True)
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                self.assertEqual(sorted(pool.map(lambda _: claim(), range(2))), [False, True])
+            with Store(root) as store:
+                self.assertEqual(read_counters(store.connection)['claims'], 1)
