@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 import unittest
 from unittest.mock import patch
 from nebula.lifecycle import init_nebula
@@ -66,7 +67,7 @@ class TrackingTests(unittest.TestCase):
             with patch('nebula.analytics.tracking.timestamp', side_effect=ValueError('invalid time')):
                 with self.assertRaises(ValueError):
                     Store(root)
-            with sqlite3.connect(root / '.nebula/state.sqlite3') as db:
+            with closing(sqlite3.connect(root / '.nebula/state.sqlite3')) as db:
                 self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 2)
                 self.assertIsNone(db.execute("SELECT name FROM sqlite_master WHERE name='analytics_meta'").fetchone())
 

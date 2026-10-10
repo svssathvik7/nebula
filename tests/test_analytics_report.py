@@ -1,4 +1,5 @@
 from dataclasses import replace
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -14,7 +15,7 @@ from tests import test_analytics_tracking as fixtures
 
 class ReportTests(unittest.TestCase):
     def dump(self, root):
-        with sqlite3.connect(root / '.nebula/state.sqlite3') as db:
+        with closing(sqlite3.connect(root / '.nebula/state.sqlite3')) as db:
             return '\n'.join(db.iterdump())
 
     def test_all_schemas_report_without_mutation_or_migration(self):
