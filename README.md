@@ -107,3 +107,6 @@ See the [approved design](docs/superpowers/specs/2026-10-06-nebula-phase-1-desig
 [implementation plan](docs/superpowers/plans/2026-10-07-nebula-phase-1.md),
 [shared skill](skills/nebula/SKILL.md), [records](skills/nebula/references/records.md)
 and [integration boundaries](skills/nebula/references/integration.md).
+
+Interested in contributing? Read the [contributor guide](contribution.md) for
+setup, tests, live host validation, bug reports, and pull request guidance.
