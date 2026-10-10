@@ -1,6 +1,7 @@
 # Nebula analytics design
 
-Status: proposed implementation design, awaiting written-spec review.
+Status: written design approved by the user on 2026-10-10; implementation pending
+plan review. Native execution preference retained from the existing session.
 Date: 2026-10-10.
 Branch: `feat/analytics`.
 
