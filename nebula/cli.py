@@ -4,7 +4,7 @@ from pathlib import Path
 from .models import dump,utcnow,load,Sample
 from .store import Store,StateUnavailable
 from .roots import resolve_context,read_config
-from .lifecycle import init_nebula,set_enabled
+from .lifecycle import init_nebula,set_mode
 from .capture import capture_event
 from .lessons import record_lesson,record_sample
 from .feedback import suggest,apply_feedback,VERDICTS
@@ -26,10 +26,13 @@ def parser():
     p=argparse.ArgumentParser(description='Nebula: shared session learning for Claude and Codex')
     sub=p.add_subparsers(dest='command',required=True)
     init=sub.add_parser('init'); init.add_argument('directory',type=Path); init.add_argument('--project',action='append',required=True,type=Path)
-    for name in ('on','off','status','observe','record-lesson','record-sample','recall','suggest','feedback','inspect','application','install','uninstall','maintain','confirm','attest','review'):
+    for name in ('on','off','mode','status','observe','record-lesson','record-sample','recall','suggest','feedback','inspect','application','install','uninstall','maintain','confirm','attest','review'):
         cmd=sub.add_parser(name); cmd.add_argument('--root',type=Path)
         if name in ('record-lesson','record-sample','suggest','application'): cmd.add_argument('--stdin',action='store_true',required=True)
         if name=='observe': cmd.add_argument('--host',required=True,choices=('claude','codex'))
+        if name=='on': cmd.add_argument('mode',nargs='?',choices=('full','observe'),default='full')
+        if name=='status': cmd.add_argument('--summary',action='store_true',help='Return only current mode and enabled state for automatic checks')
+        if name=='mode': cmd.add_argument('mode',choices=('off','observe','full'))
         if name=='recall': cmd.add_argument('--project',required=True,type=Path); cmd.add_argument('--query',required=True)
         if name in ('install','uninstall'):
             cmd.add_argument('--project',action='append',required=True,type=Path); cmd.add_argument('--host',action='append',required=True,choices=('claude','codex'))
@@ -55,8 +58,12 @@ def main(argv=None):
                 if context is None: raise ValueError('no selected nebula here; pass --root')
                 root=context.root
             else: root=args.root.resolve(strict=True)
-            if args.command in ('on','off'):
-                set_enabled(root,args.command=='on'); result={'enabled':args.command=='on'}
+            if args.command=='on':
+                set_mode(root,args.mode); result={'mode':args.mode,'enabled':True}
+            elif args.command=='off':
+                set_mode(root,'off'); result={'mode':'off','enabled':False}
+            elif args.command=='mode':
+                set_mode(root,args.mode); result={'mode':args.mode,'enabled':args.mode!='off'}
             elif args.command=='observe': result={'event_id':capture_event(root,args.host,input_json(),now=utcnow())}
             elif args.command=='install':
                 changes=plan_install(root,args.project,args.host,RUNTIME)
@@ -68,10 +75,14 @@ def main(argv=None):
             else:
                 with Store(root) as store:
                     if args.command=='status':
-                        result={**read_config(root),'counts':store.status(),'lessons':[{'lesson_id':v.lesson_id,'version':v.version,'disabled':v.disabled,'score':asdict(current_score(store,v))} for v in store.lessons()]}
-                        from .maintenance import health
-                        result['health']=health(root)
-                        result['recent_events']=[json.loads(r[0]) for r in store.connection.execute('SELECT data FROM events ORDER BY timestamp DESC LIMIT 6')]
+                        config=read_config(root)
+                        if args.summary:
+                            result={'mode':config['mode'],'enabled':config['enabled']}
+                        else:
+                            result={**config,'counts':store.status(),'lessons':[{'lesson_id':v.lesson_id,'version':v.version,'disabled':v.disabled,'score':asdict(current_score(store,v))} for v in store.lessons()]}
+                            from .maintenance import health
+                            result['health']=health(root)
+                            result['recent_events']=[json.loads(r[0]) for r in store.connection.execute('SELECT data FROM events ORDER BY timestamp DESC LIMIT 6')]
                     elif args.command=='record-lesson': result=record_lesson(store,input_json())
                     elif args.command=='record-sample': result={'new_sample':record_sample(store,load(Sample,input_json()))}
                     elif args.command=='recall': result=recall(store,project=str(args.project.resolve()),query=args.query)

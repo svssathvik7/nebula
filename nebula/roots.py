@@ -12,6 +12,10 @@ def read_config(root):
         data=json.loads(config.read_text())
         if data['root']!=str(Path(root).resolve()) or type(data['enabled']) is not bool:
             raise ValueError('invalid nebula root/state')
+        mode=data.get('mode','full' if data['enabled'] else 'off')
+        if mode not in ('off','observe','full') or data['enabled']!=(mode!='off'):
+            raise ValueError('invalid nebula mode/state')
+        data['mode']=mode
         if not data['projects'] or not isinstance(data['projects'],list): raise ValueError('invalid projects')
         for p in data['projects']:
             project=Path(p).resolve()
@@ -27,12 +31,12 @@ def resolve_context(cwd):
         if (ancestor/'.nebula').exists() or (ancestor/'.nebula').is_symlink():
             data=read_config(ancestor)
             if current==ancestor:
-                return Context(ancestor,current,data['nebula_id'],data['enabled'])
+                return Context(ancestor,current,data['nebula_id'],data['enabled'],data['mode'])
             projects=[]
             for name in data['projects']:
                 project=Path(name)
                 if current.is_relative_to(project): projects.append(project)
             if not projects: return None
             project=max(projects,key=lambda x:len(x.parts))
-            return Context(ancestor,project,data['nebula_id'],data['enabled'])
+            return Context(ancestor,project,data['nebula_id'],data['enabled'],data['mode'])
     return None

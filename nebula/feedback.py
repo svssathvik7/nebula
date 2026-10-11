@@ -83,6 +83,8 @@ def suggest(store,lesson,*,session_id,episode_id,project,context_digest,now):
     value=Suggestion(key,lesson.lesson_id,lesson.version,session_id,episode_id,project,context_digest,now,'pending')
     validate(value)
     with store.transaction():
+        if read_config(store.root)['mode']=='observe':
+            raise ValueError('suggestions are unavailable in observation mode')
         old=store.get_suggestion(key)
         if old: return old
         store.put_suggestion(value)
