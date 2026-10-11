@@ -4,6 +4,21 @@ All commands accept `--root PARENT`; stdin is JSON objects bounded to 64 KiB.
 The utility returns JSON. `status` lists recent event IDs, session and episode
 identities. Captured metadata contains no full prompts or tool output.
 
+`mode observe` selects persistent passive learning; `mode full` (or `on`)
+returns to full operation; `mode off` (or `off`) stops capture. `status` and its
+health object expose `mode`; `enabled` remains true for observe and full.
+The existing `observe --host claude|codex` command ingests one hook payload from
+stdin and does not change the mode. Legacy configurations with only `enabled`
+resolve to full or off without rewriting on reads.
+
+In observation mode, hooks capture bounded metadata and the skill can record
+candidate lessons. No suggestions or new application claims are allowed,
+including suggestion replays and already mature lessons. Explicit inspection
+and user-initiated attribution/feedback remain available; they never override
+the application gate. Finishing a claim made earlier remains bookkeeping.
+Selecting full mode preserves candidates and their existing scores; unknown
+prompt evidence still does not become verified human evidence.
+
 `record-lesson --stdin`:
 ```json
 {"lesson_id":"module-layout","version":1,"kind":"convention","trigger":"when adding a module","action":"Place it in src/modules.","context_tags":["module"],"exceptions":["generated code"],"scope_projects":[],"rationale":"Keep handwritten modules together.","rationale_source":"inferred","evidence_ids":["ev-actual-captured-id"],"disabled":false}
@@ -56,7 +71,7 @@ still remove confirmation; disable takes effect immediately.
 ```json
 {"lesson_id":"module-layout","version":1,"session_id":"actual-session","episode_id":"actual-episode","project":"/canonical/parent/child","context_match":true,"permissions_ok":true}
 ```
-A result of false withholds application (qualification/scope/OFF/duplicate or
+A result of false withholds application (qualification/scope/OFF/OBSERVE/duplicate or
 an explicit rejection/exception for that episode).
 `application finish --stdin`:
 ```json

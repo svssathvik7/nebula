@@ -29,7 +29,8 @@ python3 "$NEBULA_ENGINE" install --root /path/to/folder_bitcoin \
 ```
 
 Review the changes, run the same installation command without `--dry-run`, then
-`on --root /path/to/folder_bitcoin`. Start a fresh Claude/Codex session in a child,
+`mode observe --root /path/to/folder_bitcoin` for passive learning or
+`on --root /path/to/folder_bitcoin` for full operation. Start a fresh Claude/Codex session in a child,
 review the host’s native hook trust, and invoke its Nebula skill. The skill
 coordinates recall, contextual assessment, suggestions, learning and outcomes.
 For first activation from a parent before the skill is installed, ask your agent
@@ -37,6 +38,33 @@ to read the shared `skills/nebula/SKILL.md` by absolute path and enable Nebula f
 the selected children; the CLI sequence above is the equivalent manual setup.
 The installation only edits selected child settings; it preserves user settings
 and adds skill links at child roots to survive Git discovery boundaries.
+
+### Learn quietly before enabling learned behavior
+
+Invoke `/nebula observe` in an installed parent or selected child to record
+observations and candidate lessons while you continue ordinary work. Nebula
+does not propose suggestions, ask for confirmation or apply learned behavior
+in this mode, including mature lessons. Its engine refuses suggestions and
+new application claims. Use `/nebula status` and `/nebula inspect` to review
+what it has learned; the agent maps these to the utility's `status` and
+`inspect --lesson ID` commands. Switch to `/nebula on` when ready for full mode.
+This preserves memory and does not automatically qualify candidate lessons.
+
+| Skill request | Utility command | Behavior |
+| --- | --- | --- |
+| `/nebula observe` | `mode observe --root PARENT` | Capture evidence and record candidates quietly |
+| `/nebula on` | `on --root PARENT` | Recall, suggest and apply qualifying lessons |
+| `/nebula off` | `off --root PARENT` | Stop capture and learned application; retain memory |
+
+Observation writes only Nebula's learning state through its existing session
+workflow; it adds no daemon, polling or model calls. Hooks store metadata and
+digests, not full transcripts. Unknown-origin prompts can support candidates
+but cannot count toward observational maturity without explicit attribution.
+This mode limits Nebula's learned behavior; your agent still performs the
+ordinary work you request. It cannot cancel a host action already running.
+Update both runtime and skill before using it; older runtimes understand only
+`enabled` and do not enforce observation mode. The CLI's existing
+`observe --host HOST` command remains event ingestion, not mode selection.
 
 `off --root PARENT` retains memory and stops capture/automatic application.
 `status`, `inspect --lesson ID`, `maintain`, and `uninstall --project CHILD --host
