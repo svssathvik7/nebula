@@ -30,15 +30,20 @@ def init_nebula(root,projects):
         raise ValueError('nebula state already exists; refusing to overwrite it')
     directory.mkdir(mode=0o700)
     (directory/'.gitignore').write_text('*\n')
-    data={'root':str(root),'projects':sorted(set(selected)),'nebula_id':digest(str(root))[:24],'enabled':False}
+    data={'root':str(root),'projects':sorted(set(selected)),'nebula_id':digest(str(root))[:24],'enabled':False,'mode':'off'}
     write_config(root,data)
     with Store(root,create=True): pass
     return Context(root,root,data['nebula_id'],False)
 
 def set_enabled(root,enabled):
+    set_mode(root,'full' if enabled else 'off')
+
+def set_mode(root,mode):
+    if mode not in ('off','observe','full'): raise ValueError('invalid nebula mode')
     root=Path(root).resolve()
-    with Store(root) as store:
+    with Store(root) as store,store.transaction():
         data=read_config(root)
-        data['enabled']=bool(enabled)
+        data['mode']=mode
+        data['enabled']=mode!='off'
         write_config(root,data)
-        store.audit('enabled',{'enabled':enabled})
+        store.audit('mode',{'mode':mode,'enabled':data['enabled']})

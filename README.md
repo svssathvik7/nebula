@@ -154,6 +154,9 @@ python3 "$NEBULA_ENGINE" on --root "$NEBULA_ROOT"
 python3 "$NEBULA_ENGINE" status --root "$NEBULA_ROOT"
 ```
 
+To start with passive learning, use `on observe` instead of `on`. Bare `on`
+selects full operation; see the mode commands under [everyday use](#everyday-use).
+
 Installation adds registrations to the selected child projects and preserves
 unrelated settings. It does not change user-wide configuration.
 
@@ -169,7 +172,42 @@ the parent directory and child projects you want to include.
 
 ## Everyday use
 
-Work normally in a selected project with the Nebula skill active. Teach
+### Learn quietly before enabling learned behavior
+
+Invoke `/nebula on observe` in an installed parent or selected child to record
+observations and candidate lessons while you continue ordinary work. Nebula
+does not propose suggestions, ask for confirmation or apply learned behavior
+in this mode, including mature lessons. Its engine refuses suggestions and
+new application claims. Use `/nebula status` and `/nebula inspect` to review
+what it has learned; the agent maps these to the utility's `status` and
+`inspect --lesson ID` commands. Switch to `/nebula on` when ready for full mode.
+This preserves memory and does not automatically qualify candidate lessons.
+
+| Skill request | Utility command | Behavior |
+| --- | --- | --- |
+| `/nebula on` | `on --root PARENT` | Select full mode; recall, suggest and apply qualifying lessons |
+| `/nebula on full` | `on full --root PARENT` | Explicitly select full mode |
+| `/nebula on observe` | `on observe --root PARENT` | Capture evidence and record candidates quietly |
+| `/nebula off` | `off --root PARENT` | Stop capture and learned application; retain memory |
+
+Bare `on` always selects full, including after observation mode. Unsupported
+mode values are rejected without changing configuration. The low-level
+`mode off|observe|full` command remains an alias. For automatic mode checks,
+the skill uses `status --summary`, which returns only current `mode` and
+`enabled` regardless of lesson count. Detailed `status` remains available
+when you ask to inspect the lesson catalog, health and recent evidence.
+
+Observation writes only Nebula's learning state through its existing session
+workflow; it adds no daemon, polling or model calls. Hooks store metadata and
+digests, not full transcripts. Unknown-origin prompts can support candidates
+but cannot count toward observational maturity without explicit attribution.
+This mode limits Nebula's learned behavior; your agent still performs the
+ordinary work you request. It cannot cancel a host action already running.
+Update both runtime and skill before using it; older runtimes understand only
+`enabled` and do not enforce observation mode. The CLI's existing
+`observe --host HOST` command remains event ingestion, not mode selection.
+
+In full mode, work normally in a selected project with the Nebula skill active. Teach
 preferences explicitly and include the reason or an exception when it matters:
 
 > When I ask you to free up space, start with build caches and files we can
@@ -208,7 +246,9 @@ Useful commands, using the variables from setup:
 | Check activation, lessons, and recent events | `python3 "$NEBULA_ENGINE" status --root "$NEBULA_ROOT"` |
 | Inspect a lesson and its evidence | `python3 "$NEBULA_ENGINE" inspect --root "$NEBULA_ROOT" --lesson LESSON_ID` |
 | Pause capture and automatic application; keep memory | `python3 "$NEBULA_ENGINE" off --root "$NEBULA_ROOT"` |
-| Resume | `python3 "$NEBULA_ENGINE" on --root "$NEBULA_ROOT"` |
+| Resume full operation | `python3 "$NEBULA_ENGINE" on --root "$NEBULA_ROOT"` |
+| Learn quietly without learned application | `python3 "$NEBULA_ENGINE" on observe --root "$NEBULA_ROOT"` |
+| Check current mode with bounded output | `python3 "$NEBULA_ENGINE" status --summary --root "$NEBULA_ROOT"` |
 | Run retention and storage maintenance | `python3 "$NEBULA_ENGINE" maintain --root "$NEBULA_ROOT"` |
 | See available commands | `python3 "$NEBULA_ENGINE" --help` |
 

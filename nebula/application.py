@@ -25,6 +25,7 @@ def claim_application(store,*,lesson_id,version,session_id,episode_id,project,co
         try: ensure_capacity(store.root)
         except StateUnavailable: return False
         config=read_config(store.root); value=store.get_lesson(lesson_id)
+        if config['mode']!='full': return False
         if value is None or value.version!=version or project not in config['projects'] or (value.scope_projects and project not in value.scope_projects): return False
         decision=decide(value,current_score(store,value),enabled=config['enabled'],context_match=context_match,permissions_ok=permissions_ok,
                         suspended=bool(store.get_meta(suspension_key(lesson_id,version),False)))
