@@ -95,7 +95,7 @@ def health(root):
         config=read_config(root)
         with Store(root) as store:
             integrity=store.connection.execute('PRAGMA quick_check').fetchone()[0]
-            result.update({'integrity':integrity,'schema':2,'enabled':config['enabled'],'bytes':usage_bytes(root),
+            result.update({'integrity':integrity,'schema':2,'enabled':config['enabled'],'mode':config['mode'],'bytes':usage_bytes(root),
                            'writable':os.access(store.path,os.W_OK),'evidence_completeness':'validated sample records and independent confirmation snapshots; raw evidence may expire'})
             result['usable']=integrity=='ok' and result['writable'] and result['capacity']!='hard-limit'
     except (OSError,ValueError,sqlite3.Error,StateUnavailable) as exc: result['diagnostic']=str(exc)
