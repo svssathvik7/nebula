@@ -1,6 +1,11 @@
 # Nebula
 
-**A self-learning memory layer for Claude Code and Codex.**
+**A shared, self-learning memory layer for Claude Code and Codex.**
+
+Teach a convention in Claude Code. Recall it in Codex when you return to the
+same project. Lessons can travel in either direction, and across the related
+projects you select, so switching agents does not mean teaching your preferences
+all over again.
 
 Nebula helps your coding agent learn from how you work: the decisions you make,
 the corrections you give, and the workflows you repeat. It turns evidence from
@@ -26,12 +31,15 @@ provides the remembered context.
 End-to-end use in both hosts is still being validated. See the
 [validation results](examples/results/README.md) for completed and pending stages.
 
+[Shared memory across agents](#one-memory-across-claude-code-and-codex) ·
 [Get started](#get-started) · [Everyday use](#everyday-use) ·
 [How it works](#how-it-works) · [Documentation](#documentation) ·
 [Contributing](contribution.md)
 
 ## What you can do
 
+- **Carry learnings between Claude Code and Codex** so a lesson recorded in one
+  host can guide the other in the same project or another selected project.
 - **Build memory from your behavior and feedback** so lessons from earlier
   sessions can guide later work.
 - **Share conventions and preferences** across a selected group of projects.
@@ -45,6 +53,26 @@ The agent handles interpretation and reasoning in your existing session.
 Nebula's Python/SQLite engine stores evidence, lessons, and feedback locally.
 It uses only the Python standard library and makes no model calls of its own.
 There is no separate model, embeddings service, or background daemon.
+
+## One memory across Claude Code and Codex
+
+Suppose you tell Claude Code: **“Put new API handlers in `src/routes`, except
+generated handlers.”** With Nebula active, the agent can record that convention,
+including its exception. Later, you open the same project in Codex and ask for a
+new API handler. Codex can recall the lesson and suggest following it; once the
+lesson qualifies, it can apply it when the context matches. The same flow works
+from Codex to Claude Code.
+
+Both hosts read and write the same local memory at
+`<nebula-parent>/.nebula/state.sqlite3`. Lessons are scoped to the projects you
+select, rather than separated by the agent that learned them. Each agent uses
+the shared skill to assess relevance, exceptions, and your current instructions.
+
+The project must be registered in an enabled Nebula, with the skill and hooks
+installed and active for each host you use. Opening the same folder alone does
+not connect them. Nebula shares recorded lessons and evidence; it does not
+transfer entire conversations. Live validation of the complete workflow across
+both hosts remains in progress; see the [validation results](examples/results/README.md).
 
 ## Get started
 
