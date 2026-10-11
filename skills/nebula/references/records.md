@@ -4,6 +4,13 @@ All commands accept `--root PARENT`; stdin is JSON objects bounded to 64 KiB.
 The utility returns JSON. `status` lists recent event IDs, session and episode
 identities. Captured metadata contains no full prompts or tool output.
 
+`stats --root ANCESTOR [--output NEW_FILE.html] [--open]` returns a saved
+HTML path and compact coverage/warnings, rather than full records on stdout.
+It can read multiple independent roots beneath a plain folder, including OFF
+roots. Schema 3 adds transactional analytics counters; schemas 1/2 remain
+readable without migration or fabricated historic counts. See
+[analytics semantics](analytics.md) for metrics, retention and filters.
+
 `record-lesson --stdin`:
 ```json
 {"lesson_id":"module-layout","version":1,"kind":"convention","trigger":"when adding a module","action":"Place it in src/modules.","context_tags":["module"],"exceptions":["generated code"],"scope_projects":[],"rationale":"Keep handwritten modules together.","rationale_source":"inferred","evidence_ids":["ev-actual-captured-id"],"disabled":false}

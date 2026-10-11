@@ -3,6 +3,7 @@ from .models import Decision,dump,utcnow,digest
 from .roots import read_config
 from .feedback import bound_source
 from .scoring import current_score
+from .analytics.tracking import increment
 
 def suspension_key(key,version): return f'suspended:{key}:{version}'
 
@@ -32,7 +33,8 @@ def claim_application(store,*,lesson_id,version,session_id,episode_id,project,co
         row=store.connection.execute('SELECT 1 FROM applications WHERE lesson_id=? AND version=? AND session_id=? AND episode_id=?',(lesson_id,version,session_id,episode_id)).fetchone()
         if row: return False
         store.connection.execute('INSERT INTO applications VALUES(?,?,?,?,?)',(lesson_id,version,session_id,episode_id,dump({'project':project,'status':'claimed','timestamp':utcnow()})))
-        store.audit('application-claim',{'lesson_id':lesson_id,'version':version,'episode_id':episode_id})
+        increment(store.connection,lesson_id=lesson_id,version=version,project=project,metric='claims')
+        store.audit('application-claim',{'lesson_id':lesson_id,'version':version,'session_id':session_id,'episode_id':episode_id,'project':project})
         return True
 
 def finish_application(store,*,lesson_id,version,session_id,episode_id,outcome,source_event_ids):
@@ -51,7 +53,9 @@ def finish_application(store,*,lesson_id,version,session_id,episode_id,outcome,s
         store.connection.execute('UPDATE applications SET data=? WHERE lesson_id=? AND version=? AND session_id=? AND episode_id=?',
                                  (dump(completed),lesson_id,version,session_id,episode_id))
         if outcome=='failed': store.set_meta(suspension_key(lesson_id,version),{'failure_id':'failure-'+digest([lesson_id,version,session_id,episode_id,source_event_ids])[:32],'session_id':session_id,'episode_id':episode_id,'source_event_ids':source_event_ids,'timestamp':utcnow()})
-        store.audit('application-finish',{'lesson_id':lesson_id,'version':version,'episode_id':episode_id,'outcome':outcome})
+        increment(store.connection,lesson_id=lesson_id,version=version,project=application['project'],
+                  metric={'suitable':'successful','failed':'failed','unknown':'unknown'}[outcome])
+        store.audit('application-finish',{'lesson_id':lesson_id,'version':version,'session_id':session_id,'episode_id':episode_id,'project':application['project'],'outcome':outcome})
 
 def review_application(store,*,lesson_id,version,source_event_id):
     with store.transaction():
@@ -72,4 +76,4 @@ def review_application(store,*,lesson_id,version,source_event_id):
         if source.project not in read_config(store.root)['projects'] or (value.scope_projects and source.project not in value.scope_projects): raise ValueError('review outside lesson scope')
         store.set_meta('review-receipt:'+source_event_id,{'lesson_id':lesson_id,'version':version,'failure_id':failure_id})
         store.set_meta(key,False)
-        store.audit('application-review',{'lesson_id':lesson_id,'version':version,'source':source_event_id,'failure_id':failure_id})
+        store.audit('application-review',{'lesson_id':lesson_id,'version':version,'source':source_event_id,'project':source.project,'failure_id':failure_id})
