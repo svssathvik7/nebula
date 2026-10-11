@@ -1,43 +1,148 @@
-# Nebula phase 1
+# Nebula
 
-Nebula helps Claude Code and Codex reuse your preferences across a selected group
-of related projects. A shared skill handles interpretation and current task
-reasoning; a local Python/SQLite utility stores compact evidence, lessons and
-feedback. No separate model, embeddings, transcript importer or idle daemon runs.
-It learns conventions, decision heuristics, preferences and workflows. Disk
-cleanup is an example you could teach later, not a built-in feature.
+**A self-learning memory layer for Claude Code and Codex.**
 
-**Status:** the utility and synthetic learning loop are implemented. Actual host
-integration and manual acceptance are separate validation gates; see
-[results](examples/results/README.md) for verified stages and limitations. This
-is not a claim of exponential improvement or a trained clone of your judgment.
+Nebula helps your coding agent learn from how you work: the decisions you make,
+the corrections you give, and the workflows you repeat. It turns evidence from
+your sessions and explicit feedback into persistent lessons, then makes those
+lessons available across the related projects you select. Each lesson keeps its
+context, rationale, and exceptions so the agent can assess when to suggest or
+apply it.
 
-Requires Python 3.11+, standard library only. Tested locally on macOS with Python
-3.14.5. Runtime paths and skill registration use symlinks; keep this checkout
-available after installation. Configuration lives in `.nebula/` at the canonical
-parent. You choose the child projects; source files alone do not teach intent.
+Your disk is nearly full. You ask your agent to free up space in a project. It
+finds 20 GB of build caches and a 40 GB dataset. You tell it:
+**“Clear the caches. Keep the dataset—I need it when I'm offline.”**
+
+Nebula can learn both the choice and the reason: prefer clearing files you can
+regenerate, and preserve datasets you need offline. Once that lesson qualifies,
+the next cleanup request in a selected project can start with those priorities,
+without making you explain them again. If you later say a dataset is disposable,
+that explicit instruction takes precedence.
+
+Your agent performs the cleanup through its usual tools and permissions; Nebula
+provides the remembered context.
+
+**Current status:** the local engine and synthetic learning demo are implemented.
+End-to-end use in both hosts is still being validated. See the
+[validation results](examples/results/README.md) for completed and pending stages.
+
+[Get started](#get-started) · [Everyday use](#everyday-use) ·
+[How it works](#how-it-works) · [Documentation](#documentation) ·
+[Contributing](contribution.md)
+
+## What you can do
+
+- **Build memory from your behavior and feedback** so lessons from earlier
+  sessions can guide later work.
+- **Share conventions and preferences** across a selected group of projects.
+- **Keep the reasons and exceptions** alongside a lesson, rather than saving
+  an unconditional instruction.
+- **Inspect and correct memory** through explicit acceptance, rejection,
+  exceptions, correction, withdrawal, and disabling.
+- **Pause learning and application** without deleting what you have taught.
+
+The agent handles interpretation and reasoning in your existing session.
+Nebula's Python/SQLite engine stores evidence, lessons, and feedback locally.
+It uses only the Python standard library and makes no model calls of its own.
+There is no separate model, embeddings service, or background daemon.
+
+## Get started
+
+You need **Python 3.11 or newer**, Git, and Claude Code or Codex for the agent
+workflow. The engine and demo can run without either host. Local testing has
+used macOS; [CI](.github/workflows/ci.yml) runs the engine tests and demo on
+Ubuntu with Python 3.11–3.14. Host-specific validation is recorded separately.
+
+### 1. Clone the repository
 
 ```sh
-NEBULA_ENGINE=/Users/svssathvik/Desktop/sathvik/my-projects/SLA/scripts/nebula.py
-python3 "$NEBULA_ENGINE" init /path/to/folder_bitcoin \
-  --project /path/to/folder_bitcoin/folder_1 \
-  --project /path/to/folder_bitcoin/folder_2
-python3 "$NEBULA_ENGINE" install --root /path/to/folder_bitcoin \
-  --project /path/to/folder_bitcoin/folder_1 \
-  --project /path/to/folder_bitcoin/folder_2 \
+git clone https://github.com/svssathvik7/nebula.git
+cd nebula
+NEBULA_ENGINE="$PWD/scripts/nebula.py"
+```
+
+No Python packages need to be installed. Keep this checkout at the same location
+after setup: installed skills and hooks point back to it.
+
+To try the learning loop before connecting your projects:
+
+```sh
+python3 examples/demo.py
+```
+
+The demo uses temporary projects and synthetic acceptance receipts. It walks
+through a lesson, acceptance, application in a sibling project, an exception,
+and withdrawal. It does not change your Claude or Codex settings.
+
+### 2. Choose the projects that share memory
+
+A **Nebula** is a parent directory plus the child projects you explicitly select.
+For example, suppose these projects already exist:
+
+```text
+projects/
+├── api/          ← selected
+├── worker/       ← selected
+└── unrelated/    ← not selected
+```
+
+Replace the path below with your existing parent directory. All selected
+projects must be inside it; repeat `--project` to select more children.
+Run these commands in the same shell as step 1.
+
+```sh
+NEBULA_ROOT="/absolute/path/to/projects"
+
+python3 "$NEBULA_ENGINE" init "$NEBULA_ROOT" \
+  --project "$NEBULA_ROOT/api" \
+  --project "$NEBULA_ROOT/worker"
+```
+
+This creates local state in `projects/.nebula/`, initially OFF. Initialization
+refuses to overwrite an existing Nebula; for one already set up, use `status`
+and `on` instead.
+
+### 3. Connect your coding agents and turn it on
+
+Preview the project settings and skill links Nebula will add:
+
+```sh
+python3 "$NEBULA_ENGINE" install --root "$NEBULA_ROOT" \
+  --project "$NEBULA_ROOT/api" \
+  --project "$NEBULA_ROOT/worker" \
   --host claude --host codex --dry-run
 ```
 
-Review the changes, run the same installation command without `--dry-run`, then
-`on observe --root /path/to/folder_bitcoin` for passive learning or
-`on --root /path/to/folder_bitcoin` for full operation. Start a fresh Claude/Codex session in a child,
-review the host’s native hook trust, and invoke its Nebula skill. The skill
-coordinates recall, contextual assessment, suggestions, learning and outcomes.
-For first activation from a parent before the skill is installed, ask your agent
-to read the shared `skills/nebula/SKILL.md` by absolute path and enable Nebula for
-the selected children; the CLI sequence above is the equivalent manual setup.
-The installation only edits selected child settings; it preserves user settings
-and adds skill links at child roots to survive Git discovery boundaries.
+Use only `--host claude` or `--host codex` if you use one host. After reviewing
+the preview, run the installation without `--dry-run`, then enable Nebula:
+
+```sh
+python3 "$NEBULA_ENGINE" install --root "$NEBULA_ROOT" \
+  --project "$NEBULA_ROOT/api" \
+  --project "$NEBULA_ROOT/worker" \
+  --host claude --host codex
+
+python3 "$NEBULA_ENGINE" on --root "$NEBULA_ROOT"
+python3 "$NEBULA_ENGINE" status --root "$NEBULA_ROOT"
+```
+
+To start with passive learning, use `on observe` instead of `on`. Bare `on`
+selects full operation; see the mode commands under [everyday use](#everyday-use).
+
+Installation adds registrations to the selected child projects and preserves
+unrelated settings. It does not change user-wide configuration.
+
+Start a **fresh Claude Code or Codex session inside a selected project**, review
+project and hook trust through the host's native flow, and invoke the Nebula
+skill (`/nebula` in Claude Code). Follow the
+[host integration guide](skills/nebula/references/integration.md) if skills or
+hooks are not discovered.
+
+You can also ask your agent to do the setup. Before the skill is installed,
+give it the absolute path to this checkout's `skills/nebula/SKILL.md` and name
+the parent directory and child projects you want to include.
+
+## Everyday use
 
 ### Learn quietly before enabling learned behavior
 
@@ -74,75 +179,101 @@ Update both runtime and skill before using it; older runtimes understand only
 `enabled` and do not enforce observation mode. The CLI's existing
 `observe --host HOST` command remains event ingestion, not mode selection.
 
-`off --root PARENT` retains memory and stops capture/automatic application.
-`status`, `inspect --lesson ID`, `maintain`, and `uninstall --project CHILD --host
-HOST` are available through the same launcher. Uninstall leaves edited managed
-entries in place and reports them. It does not erase learned state.
+In full mode, work normally in a selected project with the Nebula skill active. Teach
+preferences explicitly and include the reason or an exception when it matters:
 
-Lessons start immature. Observational maturity requires five independent human
-choice episodes, three sessions, two projects, and three verified suitable
-outcomes. Confidence is `(positives + 1)/(positives + negatives + 2)`; this is a
-consistency score, not a calibrated probability of correctness. Repeated tool
-calls and the agent’s own successful execution do not add preference samples.
+> When I ask you to free up space, start with build caches and files we can
+> regenerate. Keep my datasets because I work offline, unless I explicitly
+> tell you a particular dataset can go.
 
-Accepting an identified suggestion immediately sets effective maturity and a
-confidence floor of .80 for that version and scope and resets rejection penalties.
-A rejection preserves maturity/confirmation and subtracts .02 from effective
-confidence once per decision episode, after the floor. An explicit
-`exception --reason "..."` adds no penalty and records the human reason/context.
-Both block the current decision; confidence above .75 does not override refusal.
-Correction or withdrawal removes confirmation; disable stops automatic application.
-Material changes require qualification again. Rejection penalties and decision
-blocks survive raw expiry; a new acceptance resets penalties but not old blocks.
-Automatic application needs confidence strictly above .75, maturity, a current
-context match, scope and ordinary host permission. Failures suspend the version
-until explicit user review. The utility never executes learned action strings.
+The agent can record a candidate lesson and suggest it when relevant. Once the
+lesson qualifies, it can apply the preference in matching situations across
+selected projects, subject to your current instructions and host permissions.
+Source files alone do not teach Nebula your intent.
 
-**Current acceptance limitation:** host prompt hooks do not reliably distinguish
-human submissions from generated turns. Prompt evidence remains unknown-origin.
-Use the displayed `confirm --suggestion ID --verdict accept` command yourself in
-an interactive terminal and type `NEBULA ACCEPT ID`. The agent must not simulate
-that input. `attest` attributes a captured human choice/outcome for observational
-learning; `review` reviews a failed application. These are operational user input
-boundaries, not cryptographic authentication against malicious local code.
-This fallback adds user interaction; ordinary chat acceptance alone currently
-does not promote a lesson.
-
-Raw evidence expires after 14 days and is capped at 10,000 events; observational
-samples expire after 90 days. Compact confirmations survive raw expiry. Recall
-returns at most six summaries and 8 KiB. Storage soft/hard budgets are 32/64 MiB,
-including sidecars. Capture and automatic application stop before consuming the
-feedback reserve; bounded essential feedback remains available within that reserve.
-Active confirmation controls survive ordinary suggestion expiry. Maintenance runs at session interaction, not idle polling.
-Compact rejection/exception decision blocks also persist; `inspect` shows recent
-feedback and recall includes recent explicit exception contexts within its byte budget.
-Schema v2 retains compact sample attribution for inspection after raw expiry.
-A v1 upgrade preserves old rows but withholds unverified observational evidence;
-it reconstructs confirmation only from matching captured receipt/suggestion.
-Missing/corrupt/full state withholds learned application and leaves ordinary host
-work running.
-
-Local benchmark: 1,000 events, 100 lessons, 100 hook subprocess runs including
-Python cold start: p50 **38.429 ms**, p95 **39.452 ms** (50 ms target met); in-process
-insertion p95 .142 ms; recall p95 1.900 ms; state 684,376 bytes; shortlist 2,577
-UTF-8 bytes. These are this machine’s measurements, not zero overhead or an exact
-token count. Hook utilities make no model calls; the skill uses context in existing
-agent turns. Validate overhead on your actual workload.
+**Acceptance currently requires a terminal step.** Host prompt hooks cannot
+reliably distinguish human submissions from generated turns, so saying “yes”
+in chat alone does not confirm a lesson. When the agent presents a suggestion,
+run the command it displays yourself, for example:
 
 ```sh
-python3 -m unittest discover -s tests -v
-python3 examples/demo.py
-python3 scripts/benchmark.py --events 1000 --lessons 100 --runs 100
+python3 "$NEBULA_ENGINE" confirm --root "$NEBULA_ROOT" \
+  --suggestion SUGGESTION_ID --verdict accept
 ```
 
-The demo uses temporary sibling projects and **synthetic receipts**. It exercises
-candidate → suggestion → acceptance → sibling application → exception →
-withdrawal and verifies a harmless artifact, without changing host settings.
+Replace `SUGGESTION_ID` with that suggestion's ID and type the requested
+`NEBULA ACCEPT <suggestion-id>` acknowledgement in the interactive terminal.
+The agent must not type or simulate it for you.
 
-See the [approved design](docs/superpowers/specs/2026-10-06-nebula-phase-1-design.md),
-[implementation plan](docs/superpowers/plans/2026-10-07-nebula-phase-1.md),
-[shared skill](skills/nebula/SKILL.md), [records](skills/nebula/references/records.md)
-and [integration boundaries](skills/nebula/references/integration.md).
+You can reject a suggestion, state an exception with a reason, correct or
+withdraw a lesson, or disable its automatic application. A rejection or
+exception blocks the current decision even if the lesson remains confident.
+See the [shared skill](skills/nebula/SKILL.md#acceptance-and-correction) for the
+feedback workflow.
 
-Interested in contributing? Read the [contributor guide](contribution.md) for
-setup, tests, live host validation, bug reports, and pull request guidance.
+Useful commands, using the variables from setup:
+
+| Action | Command |
+| --- | --- |
+| Check activation, lessons, and recent events | `python3 "$NEBULA_ENGINE" status --root "$NEBULA_ROOT"` |
+| Inspect a lesson and its evidence | `python3 "$NEBULA_ENGINE" inspect --root "$NEBULA_ROOT" --lesson LESSON_ID` |
+| Pause capture and automatic application; keep memory | `python3 "$NEBULA_ENGINE" off --root "$NEBULA_ROOT"` |
+| Resume full operation | `python3 "$NEBULA_ENGINE" on --root "$NEBULA_ROOT"` |
+| Learn quietly without learned application | `python3 "$NEBULA_ENGINE" on observe --root "$NEBULA_ROOT"` |
+| Check current mode with bounded output | `python3 "$NEBULA_ENGINE" status --summary --root "$NEBULA_ROOT"` |
+| Run retention and storage maintenance | `python3 "$NEBULA_ENGINE" maintain --root "$NEBULA_ROOT"` |
+| See available commands | `python3 "$NEBULA_ENGINE" --help` |
+
+To remove a host's registration from a selected project:
+
+```sh
+python3 "$NEBULA_ENGINE" uninstall --root "$NEBULA_ROOT" \
+  --project "$NEBULA_ROOT/api" --host claude
+```
+
+Repeat for other projects and hosts as needed. Uninstall removes unchanged
+Nebula-owned registrations, leaves modified entries in place and reports them,
+and keeps learned state.
+
+## How it works
+
+The learning loop is **capture → candidate lesson → suggestion → qualification
+→ recall and application → feedback**. The shared skill guides the agent;
+the engine stores records and checks whether a lesson is eligible to apply.
+It never executes stored action text itself.
+
+Lessons begin immature. They qualify through repeated, attributable human
+choices and verified outcomes across sessions and projects, or through your
+explicit acceptance of an identified suggestion. Automatic application also
+requires confidence above 0.75, matching context and scope, and ordinary host
+permission. A failed application suspends that lesson version until review.
+Confidence measures preference consistency, not the probability that a choice
+is correct.
+
+Memory is bounded: raw evidence expires after 14 days, observational samples
+after 90 days, and recall returns at most six summaries within 8 KiB. Compact
+confirmations and decision blocks survive raw evidence expiry. Maintenance runs
+during session interaction. Missing, corrupt, or full state withholds learned
+application while ordinary host work continues.
+
+Capture stores event metadata and digests rather than full prompts, command
+arguments, or tool output. Lessons and feedback still contain project context
+and human reasons, so inspect local state before sharing it. Nebula does not
+import old transcripts or train a model on your history.
+
+## Documentation
+
+| Guide | What it covers |
+| --- | --- |
+| [Shared agent skill](skills/nebula/SKILL.md) | Setup, recall, teaching, feedback, and application workflow |
+| [Host integration](skills/nebula/references/integration.md) | Claude/Codex registration, trust, capture, and input boundaries |
+| [Record formats](skills/nebula/references/records.md) | Record schemas, evidence, feedback, and application commands |
+| [Validation results](examples/results/README.md) | Verified stages, pending live tests, and local benchmark evidence |
+| [Example scenarios](examples/agent-prompts.json) | Prompts for exercising the learning workflow |
+| [Design](docs/superpowers/specs/2026-10-06-nebula-phase-1-design.md) | Architecture, qualification rules, scoring, and storage limits |
+
+## Contributing
+
+Bug reports, clearer examples, documentation improvements, tests, and host
+integration fixes are welcome. Read the [contributor guide](contribution.md)
+for development setup, validation commands, and pull request guidance.
