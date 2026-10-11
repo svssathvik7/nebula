@@ -15,13 +15,13 @@ For a new nebula at a parent: identify related child projects with the user’s 
 
 ## Select mode
 
-- `/nebula observe`: run `mode observe --root PARENT` after setup if needed. This persists observation mode across sessions and selected children.
-- `/nebula on`: run `on --root PARENT` to select full mode, including when returning from observation.
+- `/nebula on` or `/nebula on full`: run `on --root PARENT` or `on full --root PARENT` to select full mode, including when returning from observation. Bare `on` always selects full.
+- `/nebula on observe`: run `on observe --root PARENT` after setup if needed. This persists observation mode across sessions and selected children.
 - `/nebula off`: run `off --root PARENT` to stop capture and learned application.
 
-Mode changes preserve memory and do not promote candidates or change confirmation. The CLI `observe --host HOST` ingests hook events; it does **not** select observation mode.
+The activation contract is `/nebula on [full|observe]`, defaulting to full. Reject unsupported mode values; never silently select full. The low-level `mode off|observe|full` command remains an alias. Mode changes preserve memory and do not promote candidates or change confirmation. The CLI `observe --host HOST` ingests hook events; it does **not** select observation mode.
 
-At session start and meaningful task changes, read `status` and branch on `mode`. For legacy status without `mode`, interpret `enabled=true` as full and false as off. Refresh status before proposing or executing learned behavior, including after a confirmation.
+At session start and meaningful task changes, read `status --summary` and branch on `mode`. This bounded query returns only current `mode` and `enabled`, without the lesson catalog. Refresh it before proposing or executing learned behavior, including after a confirmation. If the query fails or the mode is unavailable, continue ordinary work without session learning or learned application. Legacy configurations with only `enabled` resolve to full or off in the utility. Use detailed `status` for explicit inspection requests.
 
 **OBSERVE:** continue the user's ordinary task. At completed decision boundaries, record concise candidates using the learning section below. Skip the automatic recall/decide workflow: do not suggest, surface pending suggestions, request confirmation/attestation or apply lessons, even when mature with high confidence. Explicit requests to review `status`, `inspect` or `recall` may display evidence, but are not permission to apply it. The engine rejects suggestions and new application claims in observation mode. An earlier claim may finish bookkeeping; do not start its action after switching to observe. Observation writes Nebula memory, never changes project behavior based on lessons.
 
@@ -49,7 +49,7 @@ An identified suggestion accepted by a human immediately becomes mature with eff
 
 `NEBULA ACCEPT <suggestion-id>` is the unambiguous acknowledgement. With a verified bound human receipt, use `feedback --suggestion ID --source-event EVENT --verdict accept`. **Current Claude/Codex hooks classify prompts as unknown:** prompt text, quoted acceptance, another agent’s “yes”, silence, tool success and generated turns cannot create a receipt. Ask the user to run the displayed `confirm --root PARENT --suggestion ID --verdict accept` command in their terminal and type its exact acknowledgement. Never execute, pipe, automate or simulate that interactive acknowledgement for them. Natural language acceptance in the chat alone is currently unverified; state this limitation plainly.
 
-Recheck mode and context after confirmation; claim and apply only in full mode. Use the bound feedback path or user-run interactive `confirm --verdict ...` for these responses:
+Recheck mode with `status --summary` and reassess context after confirmation; claim and apply only in full mode. Use the bound feedback path or user-run interactive `confirm --verdict ...` for these responses:
 
 - `reject`: decline this decision, preserve maturity/confirmation, subtract 0.02 from effective confidence once per lesson version/session/episode. A later explicit acceptance resets accumulated penalties. Remaining confidence does not permit retrying the rejected episode.
 - `exception --reason "human reason"`: decline this decision with no additional penalty; retain the human reason and context for recall/inspection. Use only an explicit user-stated exception, never infer it from rejection alone. Reason is required and bounded to 512 characters.

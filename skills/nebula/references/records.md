@@ -1,12 +1,17 @@
 # Utility records
 
 All commands accept `--root PARENT`; stdin is JSON objects bounded to 64 KiB.
-The utility returns JSON. `status` lists recent event IDs, session and episode
-identities. Captured metadata contains no full prompts or tool output.
+The utility returns JSON. `status --summary` returns only current `mode` and
+`enabled` for automatic session/task/application checks; its output does not
+grow with lesson count. Detailed `status` lists lessons/scores, health and
+recent event IDs, session and episode identities. Captured metadata contains no full prompts or tool output.
 
-`mode observe` selects persistent passive learning; `mode full` (or `on`)
-returns to full operation; `mode off` (or `off`) stops capture. `status` and its
-health object expose `mode`; `enabled` remains true for observe and full.
+`on [full|observe]` activates Nebula: bare `on` and `on full` select full
+operation, even after observe; `on observe` selects persistent passive learning.
+Unsupported activation modes are rejected without changing configuration.
+`off` stops capture. The low-level `mode off|observe|full` selector remains an
+alias. Detailed `status` and its health object expose `mode`; `enabled` remains
+true for observe and full.
 The existing `observe --host claude|codex` command ingests one hook payload from
 stdin and does not change the mode. Legacy configurations with only `enabled`
 resolve to full or off without rewriting on reads.

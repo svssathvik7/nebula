@@ -29,7 +29,7 @@ python3 "$NEBULA_ENGINE" install --root /path/to/folder_bitcoin \
 ```
 
 Review the changes, run the same installation command without `--dry-run`, then
-`mode observe --root /path/to/folder_bitcoin` for passive learning or
+`on observe --root /path/to/folder_bitcoin` for passive learning or
 `on --root /path/to/folder_bitcoin` for full operation. Start a fresh Claude/Codex session in a child,
 review the host’s native hook trust, and invoke its Nebula skill. The skill
 coordinates recall, contextual assessment, suggestions, learning and outcomes.
@@ -41,7 +41,7 @@ and adds skill links at child roots to survive Git discovery boundaries.
 
 ### Learn quietly before enabling learned behavior
 
-Invoke `/nebula observe` in an installed parent or selected child to record
+Invoke `/nebula on observe` in an installed parent or selected child to record
 observations and candidate lessons while you continue ordinary work. Nebula
 does not propose suggestions, ask for confirmation or apply learned behavior
 in this mode, including mature lessons. Its engine refuses suggestions and
@@ -52,9 +52,17 @@ This preserves memory and does not automatically qualify candidate lessons.
 
 | Skill request | Utility command | Behavior |
 | --- | --- | --- |
-| `/nebula observe` | `mode observe --root PARENT` | Capture evidence and record candidates quietly |
-| `/nebula on` | `on --root PARENT` | Recall, suggest and apply qualifying lessons |
+| `/nebula on` | `on --root PARENT` | Select full mode; recall, suggest and apply qualifying lessons |
+| `/nebula on full` | `on full --root PARENT` | Explicitly select full mode |
+| `/nebula on observe` | `on observe --root PARENT` | Capture evidence and record candidates quietly |
 | `/nebula off` | `off --root PARENT` | Stop capture and learned application; retain memory |
+
+Bare `on` always selects full, including after observation mode. Unsupported
+mode values are rejected without changing configuration. The low-level
+`mode off|observe|full` command remains an alias. For automatic mode checks,
+the skill uses `status --summary`, which returns only current `mode` and
+`enabled` regardless of lesson count. Detailed `status` remains available
+when you ask to inspect the lesson catalog, health and recent evidence.
 
 Observation writes only Nebula's learning state through its existing session
 workflow; it adds no daemon, polling or model calls. Hooks store metadata and
