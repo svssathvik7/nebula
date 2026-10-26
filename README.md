@@ -2,6 +2,10 @@
 
 **A shared, self-learning memory layer for Claude Code and Codex.**
 
+![Nebula learns a disk-cleanup habit in Claude Code, and Codex suggests and then applies it](docs/media/nebula-cleanup-demo.gif)
+
+<sub>Illustrative flow, not a recording. [Watch as MP4](docs/media/nebula-cleanup-demo.mp4) · [Read the full example](#example-a-cleanup-habit-you-never-wrote-down)</sub>
+
 Teach a convention in Claude Code. Recall it in Codex when you return to the
 same project. Lessons can travel in either direction, and across the related
 projects you select, so switching agents does not mean teaching your preferences
@@ -14,18 +18,11 @@ lessons available across the related projects you select. Each lesson keeps its
 context, rationale, and exceptions so the agent can assess when to suggest or
 apply it.
 
-Your disk is nearly full. You ask your agent to free up space in a project. It
-finds 20 GB of build caches and a 40 GB dataset. You tell it:
-**“Clear the caches. Keep the dataset—I need it when I'm offline.”**
-
-Nebula can learn both the choice and the reason: prefer clearing files you can
-regenerate, and preserve datasets you need offline. Once that lesson qualifies,
-the next cleanup request in a selected project can start with those priorities,
-without making you explain them again. If you later say a dataset is disposable,
-that explicit instruction takes precedence.
-
-Your agent performs the cleanup through its usual tools and permissions; Nebula
-provides the remembered context.
+For example: you clear `node_modules` in one stale project, a Rust `target/`
+folder in another, and a `build/` folder in a third, each on a different day,
+all in Claude Code. Weeks later, Codex hits a full disk and suggests the same
+cleanup for your other inactive projects. Accept it once, and both agents
+handle low disk space that way from then on. [See the full example](#example-a-cleanup-habit-you-never-wrote-down).
 
 **Current status:** the local engine and synthetic learning demo are implemented.
 End-to-end use in both hosts is still being validated. See the
@@ -56,12 +53,81 @@ There is no separate model, embeddings service, or background daemon.
 
 ## One memory across Claude Code and Codex
 
-Suppose you tell Claude Code: **“Put new API handlers in `src/routes`, except
-generated handlers.”** With Nebula active, the agent can record that convention,
-including its exception. Later, you open the same project in Codex and ask for a
-new API handler. Codex can recall the lesson and suggest following it; once the
-lesson qualifies, it can apply it when the context matches. The same flow works
-from Codex to Claude Code.
+### Example: a cleanup habit you never wrote down
+
+Your disk keeps filling up. You never give your agent a cleanup policy; you
+just tell it what to delete each time. (All the projects below are selected
+children of the same Nebula.)
+
+**March · Claude Code.** The agent reports the disk is 95% full. You say:
+*“Clear `projectX/node_modules`.”* (12 GB. Last commit: four months ago.)
+
+**April · Claude Code.** Low on space again. You say: *“Delete the Rust
+`target/` folder in `projectY`.”* (18 GB. Last commit: five months ago.)
+
+**May · Claude Code.** Again. You say: *“Remove `projectZ/build`.”* (6 GB.
+Last commit: three months ago.) Your active projects and your datasets were
+never touched.
+
+Three requests, three different tools, three different projects. Nebula links
+them into one candidate lesson, with the pattern spelled out:
+
+```text
+Lesson    On low disk space, clear rebuildable build output
+          (node_modules, target/, build/) in projects with no commits for 3+ months
+Keep      Active projects, datasets, anything that can't be regenerated
+Evidence  3 cleanups · Claude Code · projectX, projectY, projectZ
+Status    candidate · not applied
+```
+
+**June · Codex.** You're working in another project when Codex hits a full
+disk. Instead of asking you what to delete, or guessing, it suggests the pattern:
+
+```text
+Codex: Disk is 96% full. In 3 earlier cleanups (Claude Code) you cleared
+       rebuildable build output in projects inactive for 3+ months.
+       Matching now:
+         projectQ/node_modules   9 GB   last commit 4 months ago
+         projectR/target        14 GB   last commit 6 months ago
+       Clear these, and do this automatically next time?
+       Suggestion sg-7f3a. To accept, run in your terminal:
+
+       python3 "$NEBULA_ENGINE" confirm --root "$NEBULA_ROOT" \
+         --suggestion sg-7f3a --verdict accept
+```
+
+You run the command and type `NEBULA ACCEPT sg-7f3a`. Only a human at the
+terminal can accept a suggestion; an agent cannot approve one for you.
+
+**From then on · either agent.** When an agent runs into low disk space during
+a session, it clears matching build output in inactive projects, then tells you
+what it removed, how much space it freed, and which lesson it applied. Your
+host's permission prompts still apply to the deletion. If it ever picks the
+wrong thing, say *“never clean `projectQ`, I'm reviving it”* to add an exception,
+or withdraw the lesson. A failed cleanup pauses the lesson until you review it.
+
+Nebula doesn't watch your disk or delete anything itself. It runs no background
+process; the agent in your current session does the cleanup with its normal
+tools. The example shows the intended flow; end-to-end runs across both hosts
+are still being validated (see [validation results](examples/results/README.md)).
+
+### Why not just keep a LEARNINGS.md?
+
+For a rule you can state up front, a Markdown file in the repo works well, and
+you should use one. Nebula covers what a file doesn't:
+
+- **Patterns you never wrote down.** Nobody writes the rule in the example above.
+  Nebula works out the pattern (rebuildable output, inactive projects) from
+  three separate requests that never stated it.
+- **Nothing applies until you agree.** A one-off remark stays a candidate. A
+  lesson applies automatically only after you accept it at the terminal, so an
+  injected instruction in a file or web page cannot become a standing rule.
+- **One memory, scoped to the projects you pick.** Claude Code and Codex share
+  it across the selected repos, and it stays out of your team's git history.
+- **It stays small and current.** Recall returns at most six relevant lessons,
+  and lessons can be corrected, given exceptions, paused or withdrawn.
+
+### How the agents share it
 
 Both hosts read and write the same local memory at
 `<nebula-parent>/.nebula/state.sqlite3`. Lessons are scoped to the projects you
