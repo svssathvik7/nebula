@@ -4,7 +4,7 @@
 
 ![Nebula learns a disk-cleanup habit in Claude Code, and Codex suggests and then applies it](docs/media/nebula-cleanup-demo.gif)
 
-<sub>Illustrative flow, not a recording. [Watch as MP4](docs/media/nebula-cleanup-demo.mp4) · [Read the full example](#example-a-cleanup-habit-you-never-wrote-down)</sub>
+<sub>Illustrative flow, not a recording. [Watch as MP4](docs/media/nebula-cleanup-demo.mp4) ([1080p](docs/media/nebula-cleanup-explainer.mp4)) · [Read the full example](#example-a-cleanup-habit-you-never-wrote-down)</sub>
 
 Teach a convention in Claude Code. Recall it in Codex when you return to the
 same project. Lessons can travel in either direction, and across the related
