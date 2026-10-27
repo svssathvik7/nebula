@@ -1,5 +1,5 @@
 """Regression tests for the defects found in the October 2026 stability audit."""
-import io,json,os,sqlite3,stat,subprocess,sys,unittest
+import io,json,os,sqlite3,stat,subprocess,sys,time,unittest
 from pathlib import Path
 from unittest.mock import patch
 from nebula.capture import capture_event, run_hook
@@ -30,6 +30,21 @@ class ConcurrentCaptureTests(unittest.TestCase):
                 key = capture_event(root, 'claude', payload(a, 'locked'), now=utcnow())
             self.assertIsNotNone(key)
             self.assertIn('locked', stored_sessions(root))
+
+    def test_new_session_capture_does_not_wait_on_an_open_reader(self):
+        with workspace() as (root, a, b):
+            init_nebula(root, [a]); set_mode(root, 'full')
+            capture_event(root, 'claude', payload(a, 'first'), now=utcnow())
+            reader = sqlite3.connect(root/'.nebula/state.sqlite3', isolation_level=None)
+            try:
+                reader.execute('BEGIN'); reader.execute('SELECT COUNT(*) FROM events').fetchone()
+                capture_event(root, 'claude', payload(a, 'second'), now=utcnow())
+                started = time.monotonic()
+                key = capture_event(root, 'claude', payload(a, 'third'), now=utcnow())
+                elapsed = time.monotonic() - started
+            finally: reader.close()
+            self.assertIsNotNone(key)
+            self.assertLess(elapsed, 1.0)
 
     def test_simultaneous_hook_processes_store_every_event(self):
         with workspace() as (root, a, b):
@@ -73,9 +88,11 @@ class MalformedInputTests(unittest.TestCase):
             init_nebula(root, [a])
             result = subprocess.run([sys.executable, str(RUNTIME/'scripts/nebula.py'), 'record-lesson', '--root', str(root), '--stdin'],
                                     input=self.NESTED, capture_output=True)
+            # The exception type varies by Python version (RecursionError before
+            # 3.14, ValueError from 3.14); what matters is a clean JSON error.
             self.assertEqual(result.returncode, 1)
-            self.assertEqual(json.loads(result.stderr)['error'], 'RecursionError')
             self.assertNotIn(b'Traceback', result.stderr)
+            self.assertIn(json.loads(result.stderr)['error'], ('RecursionError', 'ValueError'))
 
 
 class UninstallMalformedSettingsTests(unittest.TestCase):
