@@ -1,5 +1,6 @@
 """Regression tests for the defects found in the October 2026 stability audit."""
 import io,json,os,sqlite3,stat,subprocess,sys,time,unittest
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 from nebula.capture import capture_event, run_hook
@@ -45,6 +46,28 @@ class ConcurrentCaptureTests(unittest.TestCase):
             finally: reader.close()
             self.assertIsNotNone(key)
             self.assertLess(elapsed, 1.0)
+
+    def test_state_file_vanishing_during_usage_scan_is_not_a_full_store(self):
+        # SQLite deletes -wal/-shm when the last connection closes, so another
+        # hook can remove a file between listing the directory and reading it.
+        from nebula import maintenance
+        real_scandir = os.scandir
+        @contextmanager
+        def racing_scandir(path):
+            with real_scandir(path) as listing: entries = list(listing)
+            for entry in entries:
+                if entry.name == 'state.sqlite3-wal': os.unlink(entry.path)
+            yield iter(entries)
+        with workspace() as (root, a, b):
+            init_nebula(root, [a]); set_mode(root, 'full')
+            (root/'.nebula/state.sqlite3-wal').write_bytes(b'')
+            with patch.object(maintenance.os, 'scandir', racing_scandir):
+                self.assertEqual(maintenance.capacity_state(root), 'normal')
+            (root/'.nebula/state.sqlite3-wal').write_bytes(b'')
+            with patch.object(maintenance.os, 'scandir', racing_scandir):
+                key = capture_event(root, 'claude', payload(a, 'raced'), now=utcnow())
+            self.assertIsNotNone(key)
+            self.assertIn('raced', stored_sessions(root))
 
     def test_simultaneous_hook_processes_store_every_event(self):
         with workspace() as (root, a, b):

@@ -19,9 +19,13 @@ def usage_bytes(root):
             for entry in entries:
                 scanned+=1
                 if scanned>10000 or entry.is_symlink(): raise StateUnavailable('unbounded or symlinked nebula storage')
-                if entry.is_dir(follow_symlinks=False): pending.append(Path(entry.path))
-                elif entry.is_file(follow_symlinks=False): total+=entry.stat(follow_symlinks=False).st_size
-                else: raise StateUnavailable('unsupported nebula state entry')
+                # SQLite deletes -wal/-shm when the last connection closes, so an
+                # entry can vanish mid-scan; that is not a full or broken store.
+                try:
+                    if entry.is_dir(follow_symlinks=False): pending.append(Path(entry.path))
+                    elif entry.is_file(follow_symlinks=False): total+=entry.stat(follow_symlinks=False).st_size
+                    elif os.path.lexists(entry.path): raise StateUnavailable('unsupported nebula state entry')
+                except FileNotFoundError: continue
     return total
 
 def capacity_state(root):
