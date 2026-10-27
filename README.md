@@ -371,3 +371,7 @@ import old transcripts or train a model on your history.
 Bug reports, clearer examples, documentation improvements, tests, and host
 integration fixes are welcome. Read the [contributor guide](contribution.md)
 for development setup, validation commands, and pull request guidance.
+
+## License
+
+Nebula is released under the [MIT License](LICENSE).
