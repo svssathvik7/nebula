@@ -13,6 +13,13 @@ Invoke `python3 <absolute-path-to-this-skill>/scripts/nebula.py`. Resolve the in
 
 For a new nebula at a parent: identify related child projects with the user’s stated scope. Initialize using `init PARENT --project CHILD` (repeat per selected child), then `install --root PARENT --host claude --host codex --project CHILD` for each selected child. Inspect `install --dry-run` before writing. Keep existing Nebula state; never initialize over it. Report the concrete child registrations. Start fresh host sessions and follow their native trust review; see [integration](references/integration.md).
 
+## Change selected projects
+
+- `/nebula add CHILD`: run `add-project --root PARENT --project CHILD` (repeat `--project` per child), then preview and run `install` for each added child with the hosts the user uses. Existing lessons, evidence and mode are kept. Already-selected children are reported, not duplicated. Children must be existing folders inside the parent.
+- `/nebula remove CHILD`: run `uninstall --root PARENT --project CHILD --host HOST` for each installed host first, and report entries it retained. Then run `remove-project --root PARENT --project CHILD`. It refuses while registrations remain, and refuses to remove the last child (use `off` instead). Lessons are never deleted; report `lessons_scoped_only_to_removed`, which no longer match any selected child, so the user can withdraw or keep them.
+
+Never initialize over an existing nebula to change its children.
+
 ## Select mode
 
 - `/nebula on` or `/nebula on full`: run `on --root PARENT` or `on full --root PARENT` to select full mode, including when returning from observation. Bare `on` always selects full.
