@@ -9,6 +9,10 @@ from .models import Event, Lesson, Sample, Suggestion, dump, load, validate, utc
 class StateUnavailable(RuntimeError): pass
 
 class Store:
+    # How long a connection waits for another process's write lock. Hooks
+    # lower this to stay inside the host's one-second hook timeout.
+    busy_timeout_ms=5000
+
     def __init__(self,root,*,create=False):
         self.root=Path(root).resolve()
         self.directory=self.root/'.nebula'
@@ -19,9 +23,9 @@ class Store:
         if not create and not self.path.is_file():
             raise StateUnavailable('nebula database missing; refusing to recreate history')
         try:
-            self.connection=sqlite3.connect(self.path,timeout=0.1,isolation_level=None)
+            self.connection=sqlite3.connect(self.path,timeout=self.busy_timeout_ms/1000,isolation_level=None)
             self.connection.row_factory=sqlite3.Row
-            self.connection.execute('PRAGMA busy_timeout=100')
+            self.connection.execute(f'PRAGMA busy_timeout={int(self.busy_timeout_ms)}')
             if create:
                 os.chmod(self.path,0o600)
                 self.connection.execute('PRAGMA journal_mode=WAL')
