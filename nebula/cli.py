@@ -1,4 +1,4 @@
-import argparse,json,sqlite3,sys
+import argparse,json,sqlite3,sys,webbrowser
 from dataclasses import asdict
 from pathlib import Path
 from .models import dump,utcnow,load,Sample
@@ -26,6 +26,10 @@ def parser():
     p=argparse.ArgumentParser(description='Nebula: shared session learning for Claude and Codex')
     sub=p.add_subparsers(dest='command',required=True)
     init=sub.add_parser('init'); init.add_argument('directory',type=Path); init.add_argument('--project',action='append',required=True,type=Path)
+    stats=sub.add_parser('stats',help='Generate a local multi-nebula analytics report')
+    stats.add_argument('--root',type=Path)
+    stats.add_argument('--output',type=Path)
+    stats.add_argument('--open',action='store_true',help='Open the saved report in your browser')
     for name in ('on','off','mode','status','observe','record-lesson','record-sample','recall','suggest','feedback','inspect','application','install','uninstall','maintain','confirm','attest','review'):
         cmd=sub.add_parser(name); cmd.add_argument('--root',type=Path)
         if name in ('record-lesson','record-sample','suggest','application'): cmd.add_argument('--stdin',action='store_true',required=True)
@@ -48,10 +52,32 @@ def parser():
         if name=='application': cmd.add_argument('operation',choices=('claim','finish','review'))
     return p
 
+def stats_result(args):
+    from .analytics.report import build_report
+    from .analytics.render import write_report
+    report=build_report(args.root or Path.cwd())
+    output=write_report(report,scan_root=Path(report['scan_root']),output=args.output)
+    warnings=[*report['warnings'],*report['discovery']['warnings']]
+    for nebula in report['nebulas']:
+        if not nebula['available']: warnings.append(nebula['diagnostic'])
+        else: warnings.extend(nebula['warnings'])
+    if args.open:
+        try:
+            if not webbrowser.open(output.as_uri()): warnings.append('Browser did not open; the report is saved at the output path.')
+        except (OSError,webbrowser.Error):
+            warnings.append('Browser could not open; the report is saved at the output path.')
+    return {'output':str(output),'generated_at':report['generated_at'],
+            'discovered_nebulas':report['summary']['discovered_nebulas'],
+            'available_nebulas':report['summary']['available_nebulas'],
+            'discovery_complete':report['discovery']['complete'],
+            'details_complete':all(n['coverage']['details_complete'] for n in report['nebulas'] if n['available']),
+            'warnings':[w[:512] for w in warnings[:10]],'warnings_omitted':max(0,len(warnings)-10)}
+
 def main(argv=None):
     args=parser().parse_args(argv)
     try:
-        if args.command=='init': result=asdict(init_nebula(args.directory,args.project))
+        if args.command=='stats': result=stats_result(args)
+        elif args.command=='init': result=asdict(init_nebula(args.directory,args.project))
         else:
             if args.root is None:
                 context=resolve_context(Path.cwd())

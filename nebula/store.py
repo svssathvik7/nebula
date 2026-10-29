@@ -31,14 +31,16 @@ class Store:
                 self.connection.execute('PRAGMA journal_mode=WAL')
                 self._schema()
             version=self.connection.execute('PRAGMA user_version').fetchone()[0]
-            if version not in (1,2): raise StateUnavailable('unsupported or missing nebula schema')
+            if version not in (1,2,3): raise StateUnavailable('unsupported or missing nebula schema')
             self._validate_schema(version)
             if version==1: self._migrate_v1()
-            self._validate_schema(2)
+            if version<3: self._migrate_v2()
+            self._validate_schema(3)
+            self.schema_version=3
         except (sqlite3.Error,OSError) as exc:
             self.close()
             raise StateUnavailable('nebula database unavailable') from exc
-        except StateUnavailable:
+        except (StateUnavailable,ValueError):
             self.close(); raise
 
     def _schema(self):
@@ -57,9 +59,11 @@ class Store:
         CREATE TABLE installations(project TEXT,host TEXT,data TEXT NOT NULL,PRIMARY KEY(project,host));
         CREATE TABLE audit(id INTEGER PRIMARY KEY,timestamp TEXT NOT NULL,kind TEXT NOT NULL,data TEXT NOT NULL);
         CREATE TABLE sample_provenance(lesson_id TEXT,version INTEGER,episode_id TEXT,data TEXT NOT NULL,PRIMARY KEY(lesson_id,version,episode_id));
-        PRAGMA user_version=2;
-        COMMIT;
         ''')
+        from .analytics.tracking import create_tracking
+        create_tracking(self.connection,since=utcnow())
+        self.connection.execute('PRAGMA user_version=3')
+        self.connection.execute('COMMIT')
 
     def _validate_schema(self,version):
         expected={'meta':('key','value'),'events':('id','digest','timestamp','data'),
@@ -69,7 +73,10 @@ class Store:
                   'confirmations':('lesson_id','version','data'),
                   'applications':('lesson_id','version','session_id','episode_id','data'),
                   'installations':('project','host','data'),'audit':('id','timestamp','kind','data')}
-        if version==2: expected['sample_provenance']=('lesson_id','version','episode_id','data')
+        if version>=2: expected['sample_provenance']=('lesson_id','version','episode_id','data')
+        if version>=3:
+            from .analytics.tracking import TABLES
+            expected.update(TABLES)
         for name,columns in expected.items():
             info=self.connection.execute(f'PRAGMA table_info({name})').fetchall()
             if tuple(row['name'] for row in info)!=columns or not any(row['pk'] for row in info):
@@ -90,6 +97,14 @@ class Store:
                 else: data['legacy_unverified']=True
                 self.connection.execute('UPDATE confirmations SET data=? WHERE lesson_id=? AND version=?',(dump(data),row['lesson_id'],row['version']))
             self.connection.execute('PRAGMA user_version=2')
+
+    def _migrate_v2(self):
+        from .analytics.tracking import create_tracking
+        from .maintenance import ensure_capacity
+        ensure_capacity(self.root,essential=True)
+        with self.transaction():
+            create_tracking(self.connection,since=utcnow())
+            self.connection.execute('PRAGMA user_version=3')
 
     def __enter__(self): return self
     def __exit__(self,*args): self.close()

@@ -61,6 +61,7 @@ def prune(store,now):
         active=store.connection.execute("SELECT 1 FROM confirmations WHERE json_extract(data,'$.suggestion_id')=?",(row['id'],)).fetchone()
         if not active and timestamp(json.loads(row['data'])['created_at'])<timestamp(sample_cutoff):
             db.execute('DELETE FROM suggestions WHERE id=?',(row['id'],))
+    db.execute('DELETE FROM analytics_feedback WHERE suggestion_id NOT IN (SELECT id FROM suggestions)')
     return {'raw_cutoff':raw_cutoff,'sample_cutoff':sample_cutoff}
 
 def maintain(root,*,now,blocking=True):
@@ -103,7 +104,7 @@ def health(root):
         config=read_config(root)
         with Store(root) as store:
             integrity=store.connection.execute('PRAGMA quick_check').fetchone()[0]
-            result.update({'integrity':integrity,'schema':2,'enabled':config['enabled'],'mode':config['mode'],'bytes':usage_bytes(root),
+            result.update({'integrity':integrity,'schema':store.schema_version,'enabled':config['enabled'],'mode':config['mode'],'bytes':usage_bytes(root),
                            'writable':os.access(store.path,os.W_OK),'evidence_completeness':'validated sample records and independent confirmation snapshots; raw evidence may expire'})
             result['usable']=integrity=='ok' and result['writable'] and result['capacity']!='hard-limit'
     except (OSError,ValueError,sqlite3.Error,StateUnavailable) as exc: result['diagnostic']=str(exc)

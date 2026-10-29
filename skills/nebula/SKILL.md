@@ -1,6 +1,6 @@
 ---
 name: nebula
-description: Use when the user enables, observes or manages a nebula of related child projects, when a Nebula ON or OBSERVE hook appears, or when teaching, recalling, accepting, correcting or applying shared learned preferences in a selected project.
+description: Use when the user enables, observes or manages a nebula of related child projects, requests nebula stats, when a Nebula ON or OBSERVE hook appears, or when teaching, recalling, accepting, correcting or applying shared learned preferences in a selected project.
 ---
 
 # Nebula
@@ -26,6 +26,10 @@ At session start and meaningful task changes, read `status --summary` and branch
 **OBSERVE:** continue the user's ordinary task. At completed decision boundaries, record concise candidates using the learning section below. Skip the automatic recall/decide workflow: do not suggest, surface pending suggestions, request confirmation/attestation or apply lessons, even when mature with high confidence. Explicit requests to review `status`, `inspect` or `recall` may display evidence, but are not permission to apply it. The engine rejects suggestions and new application claims in observation mode. An earlier claim may finish bookkeeping; do not start its action after switching to observe. Observation writes Nebula memory, never changes project behavior based on lessons.
 
 **FULL:** follow recall and decide below. **OFF or unavailable:** continue ordinary work without session learning or learned application.
+
+## Stats
+
+For “nebula stats”, invoke the bundled launcher with `stats --root <requested-ancestor> --open`. The ancestor may contain multiple independent Nebulas; default to the current folder if none is named. Reporting requires no initialization, installation or ON. It reads old state without migration and reports unavailable roots separately. Return the output path, coverage and concise warnings; keep full lesson data in the HTML. Tracked counts start at analytics initialization; retained history is partial. Successful applications are recorded outcomes, not saved minutes. See [analytics semantics](references/analytics.md). Use `--output <new-file.html>` for a requested location; never overwrite an existing report.
 
 ## Recall and decide
 

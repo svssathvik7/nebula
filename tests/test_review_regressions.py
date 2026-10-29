@@ -174,9 +174,11 @@ m.install(m.plan_install(Path(sys.argv[1]),[Path(sys.argv[2])],['claude'],Path(s
         with workspace() as (root,a,b):
             with self.state(root,a,b)[0] as store:
                 store.connection.execute('DROP TABLE sample_provenance')
+                for table in ('analytics_counters','analytics_feedback','analytics_meta'):
+                    store.connection.execute('DROP TABLE '+table)
                 store.connection.execute('PRAGMA user_version=1')
             with Store(root) as store:
-                self.assertEqual(store.connection.execute('PRAGMA user_version').fetchone()[0],2)
+                self.assertEqual(store.connection.execute('PRAGMA user_version').fetchone()[0],3)
                 self.assertEqual(len(store.samples('layout',1)),1)
                 self.assertIsNone(store.sample_provenance('layout',1,'e1'))
                 self.assertTrue(store.confirmed('layout',1))

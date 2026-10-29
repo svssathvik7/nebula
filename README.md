@@ -316,6 +316,7 @@ Useful commands, using the variables from setup:
 | Learn quietly without learned application | `python3 "$NEBULA_ENGINE" on observe --root "$NEBULA_ROOT"` |
 | Check current mode with bounded output | `python3 "$NEBULA_ENGINE" status --summary --root "$NEBULA_ROOT"` |
 | Run retention and storage maintenance | `python3 "$NEBULA_ENGINE" maintain --root "$NEBULA_ROOT"` |
+| Generate an HTML analytics report | `python3 "$NEBULA_ENGINE" stats --root "$NEBULA_ROOT" --open` |
 | See available commands | `python3 "$NEBULA_ENGINE" --help` |
 
 To remove a host's registration from a selected project:
@@ -328,6 +329,74 @@ python3 "$NEBULA_ENGINE" uninstall --root "$NEBULA_ROOT" \
 Repeat for other projects and hosts as needed. Uninstall removes unchanged
 Nebula-owned registrations, leaves modified entries in place and reports them,
 and keeps learned state.
+
+### Multi-Nebula stats
+
+From a folder containing several independent Nebulas, ask your agent for
+“nebula stats”, or run:
+
+```sh
+python3 "$NEBULA_ENGINE" stats --root /path/to/projects --open
+# Choose a new output filename; existing files are never overwritten.
+python3 "$NEBULA_ENGINE" stats --root /path/to/projects --output /path/to/report.html
+```
+
+The requested ancestor need not be a Nebula. With no `--root`, the command scans
+the current folder. It generates a standalone, interactive HTML report; `--open`
+opens the saved file in your browser. It works while Nebula is OFF and needs no
+initialization or host configuration. Browser-opening failures leave the report
+available at the returned path. The command prints only compact coverage and
+warnings, keeping lesson data out of agent context.
+
+The dashboard shows learned triggers, actions, contexts, exceptions and rationale;
+current maturity/confidence; selected projects; lesson versions; feedback counts;
+successful, failed, unknown and unfinished applications; retained recent activity;
+and storage/coverage. Filter details by Nebula, actual project, lesson kind,
+maturity and text. Global summary cards remain global. Confidence measures
+preference consistency. The default lesson view shows current versions; switch
+Versions to inspect older versions or all versions together.
+A suitable recorded application counts as successful;
+time saved requires a manual-work baseline and is deferred.
+
+Schema 3 stores compact counters in the same transactions as suggestions,
+feedback and applications. Suggestion replays, repeat verdicts and completion
+replays do not inflate counts. Acceptance is distinct from execution. Counters
+survive raw history expiry and start at analytics initialization, with no
+historical backfill. Normal engine use upgrades valid older state; stats reads
+schemas 1/2/3 without migration. Older roots show analytics uninitialized and
+partial retained history. Unavailable roots show diagnostics rather than zero
+activity. Each root is read consistently, at its own snapshot time.
+
+Discovery skips `.git`, `.nebula`, `.nebula-reports`, `.superpowers`, `.venv`,
+`venv`, `node_modules`, `target`, `dist`, `build` and `__pycache__`, and does not
+follow descendant directory symlinks. It stops at 10,000 directories, 100,000
+entries, depth 12 or 100 candidate roots. Details are capped at 1,000 lesson
+versions and 100 activity records per root; the payload is capped at 8 MiB.
+Limits and read failures produce visible coverage warnings. Aggregate counts
+use the full available state even when details are truncated.
+
+Reports use no remote assets and need no server or frontend dependencies. They
+contain local paths, lesson text and retained human reasons. New files are
+owner-only; output collisions, symlink paths and `.nebula` destinations are
+refused. Inspect reports before sharing and regenerate them to refresh data.
+Automatically named reports are ignored by Git; custom output names require
+your own ignore rules.
+
+For a synthetic preview and reproducible local measurements:
+
+```sh
+python3 examples/analytics_demo.py --output /path/to/new-report.html
+python3 scripts/benchmark_analytics.py --runs 100
+```
+
+For browser regression checks, evaluate the function in
+`examples/analytics_browser_checks.js` in the console of a fresh synthetic
+report. It checks the current-version default, version history and project
+activity, then restores the filters.
+
+The benchmark compares the same schema/workflow with analytics instrumentation
+enabled and disabled. It measures local bookkeeping and report generation, not
+user time saved or a historical release. See [analytics semantics](skills/nebula/references/analytics.md).
 
 ## How it works
 
@@ -362,6 +431,7 @@ import old transcripts or train a model on your history.
 | [Shared agent skill](skills/nebula/SKILL.md) | Setup, recall, teaching, feedback, and application workflow |
 | [Host integration](skills/nebula/references/integration.md) | Claude/Codex registration, trust, capture, and input boundaries |
 | [Record formats](skills/nebula/references/records.md) | Record schemas, evidence, feedback, and application commands |
+| [Analytics semantics](skills/nebula/references/analytics.md) | What `stats` counts, retention, coverage warnings, and report privacy |
 | [Validation results](examples/results/README.md) | Verified stages, pending live tests, and local benchmark evidence |
 | [Example scenarios](examples/agent-prompts.json) | Prompts for exercising the learning workflow |
 | [Design](docs/superpowers/specs/2026-10-06-nebula-phase-1-design.md) | Architecture, qualification rules, scoring, and storage limits |
