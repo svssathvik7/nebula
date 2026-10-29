@@ -1,5 +1,5 @@
 """Reviewable registration; only exact manifest-owned changes are removed."""
-import json,os,shlex,sys,tomllib
+import json,os,shlex,stat,sys,tomllib
 from pathlib import Path
 from .models import dump
 from .roots import read_config,resolve_context
@@ -10,12 +10,26 @@ HOSTS={'claude','codex'}
 def write_atomic(path,text):
     path=Path(path); path.parent.mkdir(parents=True,exist_ok=True)
     temporary=path.with_name(path.name+'.nebula-'+os.urandom(6).hex())
+    # Keep the permissions of a file the user already has; new files stay private.
+    mode=stat.S_IMODE(path.stat().st_mode) if path.is_file() and not path.is_symlink() else 0o600
     try:
         fd=os.open(temporary,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
         with os.fdopen(fd,'w') as out:
             out.write(text); out.flush(); os.fsync(out.fileno())
+        os.chmod(temporary,mode)
         os.replace(temporary,path)
     finally: temporary.unlink(missing_ok=True)
+
+def render_json(document,like=None):
+    """Serialize host settings in the style of the user's existing file, keeping key order."""
+    text=(like or {}).get('text','').strip()
+    if text and '\n' not in text: return json.dumps(document,separators=(',',':'),ensure_ascii=False)+'\n'
+    indent=next((len(line)-len(line.lstrip(' ')) for line in text.splitlines()[1:] if line.startswith(' ')),2)
+    return json.dumps(document,indent=indent,ensure_ascii=False)+'\n'
+
+def usable_hooks_document(document):
+    hooks=document.get('hooks',{}) if isinstance(document,dict) else None
+    return isinstance(hooks,dict) and all(isinstance(v,list) for v in hooks.values())
 
 def snapshot(path):
     path=Path(path)
@@ -124,7 +138,7 @@ def plan_install(root,projects,hosts,runtime):
                 if additions:
                     merged=json.loads(json.dumps(document)); merged.setdefault('hooks',{})
                     for name,values in additions.items(): merged['hooks'].setdefault(name,[]).extend(values)
-                    changes.append({'root':str(root),'project':str(project),'host':host,'kind':'hooks','path':str(path),'before':before,'after':{'text':dump(merged)+'\n'},'groups':additions})
+                    changes.append({'root':str(root),'project':str(project),'host':host,'kind':'hooks','path':str(path),'before':before,'after':{'text':render_json(merged,before)},'groups':additions})
     paths={v['path'] for v in changes}
     requested={(str(Path(p).resolve()),h) for p in projects for h in hosts}
     for old in recovery:
@@ -194,7 +208,11 @@ def uninstall(root,project,host):
             if current is None: continue
             if change['kind']=='hooks' and not path.is_symlink():
                 try: document=json.loads(current['text'])
-                except (ValueError,KeyError): skipped.append(str(path)); retained.append(change); continue
+                except (ValueError,KeyError,RecursionError): document=None
+                if not usable_hooks_document(document): skipped.append(str(path)); retained.append(change); continue
+                try: original=json.loads(change['before']['text']) if change['before'] else {}
+                except ValueError: original={}
+                original_hooks=original.get('hooks',{}) if usable_hooks_document(original) else {}
                 modified=False
                 for name,groups in change['groups'].items():
                     entries=document.get('hooks',{}).get(name,[])
@@ -205,12 +223,13 @@ def uninstall(root,project,host):
                             # command with the same launcher is user-owned now.
                             command=group['hooks'][0]['command']
                             if any(any(h.get('command')==command for h in e.get('hooks',[]) if isinstance(h,dict)) for e in entries if isinstance(e,dict)): modified=True
-                    if not entries and name in document.get('hooks',{}): del document['hooks'][name]
-                original=json.loads(change['before']['text']) if change['before'] else {}
+                    # Drop only keys Nebula created; an empty key the user had stays.
+                    if not entries and name in document.get('hooks',{}) and name not in original_hooks: del document['hooks'][name]
                 if not document.get('hooks') and 'hooks' not in original: document.pop('hooks',None)
                 if modified: skipped.append(str(path)); retained.append(change)
                 if document=={} and change['before'] is None: path.unlink()
-                else: write_atomic(path,dump(document)+'\n')
+                elif change['before'] and document==original: write_atomic(path,change['before']['text'])
+                else: write_atomic(path,render_json(document,current))
                 removed.append(str(path)); continue
             if current!=change['after']: skipped.append(str(path)); retained.append(change); continue
             if change['before'] is None: path.unlink()

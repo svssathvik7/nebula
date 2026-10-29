@@ -4,7 +4,7 @@ from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
-from nebula.lifecycle import init_nebula
+from nebula.lifecycle import init_nebula, set_enabled
 from nebula.store import Store
 from nebula.analytics.snapshot import snapshot_nebula, ReadOnlyStore
 from nebula.analytics.report import build_report, bound_payload
@@ -56,7 +56,7 @@ class ReportTests(unittest.TestCase):
     def test_override_rows_not_executions(self):
         helper = fixtures.TransitionTests()
         with workspace() as (root, a, b):
-            init_nebula(root, [a, b])
+            init_nebula(root, [a, b]); set_enabled(root, True)
             with Store(root) as store:
                 pending = helper.pending(store, a)
                 helper.feedback(store, pending, 'reject', 'reject')
@@ -78,7 +78,7 @@ class ReportTests(unittest.TestCase):
     def test_v1_confirmation_is_not_verified(self):
         helper = fixtures.TransitionTests()
         with workspace() as (root, a, b):
-            init_nebula(root, [a, b])
+            init_nebula(root, [a, b]); set_enabled(root, True)
             with Store(root) as store:
                 helper.feedback(store, helper.pending(store, a), 'accept', 'accept')
                 fixtures.make_legacy(store, 1)

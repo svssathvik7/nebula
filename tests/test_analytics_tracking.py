@@ -100,7 +100,7 @@ class TransitionTests(unittest.TestCase):
 
     def test_suggestion_and_feedback_replay_deduplicate_categories(self):
         with workspace() as (root, a, b):
-            init_nebula(root, [a, b])
+            init_nebula(root, [a, b]); set_enabled(root, True)
             with Store(root) as store:
                 pending = self.pending(store, a)
                 self.assertEqual(self.pending(store, a), pending)

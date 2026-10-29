@@ -84,6 +84,9 @@ def suggest(store,lesson,*,session_id,episode_id,project,context_digest,now):
     value=Suggestion(key,lesson.lesson_id,lesson.version,session_id,episode_id,project,context_digest,now,'pending')
     validate(value)
     with store.transaction():
+        mode=read_config(store.root)['mode']
+        if mode=='observe': raise ValueError('suggestions are unavailable in observation mode')
+        if mode!='full': raise ValueError('suggestions are unavailable while nebula is off')
         old=store.get_suggestion(key)
         if old: return old
         store.put_suggestion(value)

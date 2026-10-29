@@ -12,6 +12,7 @@ class Context:
     project: Path
     nebula_id: str
     enabled: bool
+    mode: str = 'off'
 
 @dataclass(frozen=True)
 class Event:

@@ -1,13 +1,13 @@
 import unittest
 from dataclasses import replace
 from nebula.store import Store
-from nebula.lifecycle import init_nebula
+from nebula.lifecycle import init_nebula, set_mode
 from nebula.feedback import suggest, apply_feedback
 from tests.support import workspace, lesson, event, NOW
 
 class FeedbackTests(unittest.TestCase):
     def setup_state(self, root, a, b):
-        init_nebula(root,[a,b])
+        init_nebula(root,[a,b]); set_mode(root,'full')
         store=Store(root); value=lesson(); store.put_lesson(value)
         pending=suggest(store,value,session_id='s1',episode_id='e1',project=str(a),context_digest='context',now=NOW)
         return store,value,pending

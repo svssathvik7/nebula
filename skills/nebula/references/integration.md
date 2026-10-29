@@ -22,6 +22,16 @@ failure; they return advisory additionalContext only on start/prompt events.
 Metadata persists event/session/turn/project identity and a digest, never full
 prompts, command arguments or tool output.
 
+Mode is shared by all selected children of the canonical parent. Both hosts
+emit passive OBSERVE guidance on start/prompt events in observation mode;
+full mode emits ON guidance. OFF stops capture. Update the installed runtime
+and skill together before selecting observation mode: older runtimes that
+only check `enabled` do not enforce this mode. Existing symlink registrations
+follow that runtime checkout; use fresh sessions when updating skill content.
+The utility gates new suggestions/application claims using current mode inside
+their write transaction, rather than relying on a session's cached status.
+It cannot cancel host tool actions already executing when the mode changes.
+
 Documented UserPromptSubmit payloads supply no authenticated human-origin field.
 Codex Stop may create generated prompt turns. Prompts remain unknown; tool calls
 are assistant, explicit agent_id is subagent and lifecycle is system. The
