@@ -27,6 +27,10 @@ At session start and meaningful task changes, read `status --summary` and branch
 
 **FULL:** follow recall and decide below. **OFF or unavailable:** continue ordinary work without session learning or learned application.
 
+## Check setup
+
+For `/nebula doctor`, or when Nebula seems inactive (no capture, skill not found, hooks not firing), run `doctor --root PARENT`; inside a selected child, `--root` may be omitted. It is read-only, works in every mode and with a broken configuration, and exits 1 when any check fails. Output lists only problems (failures first, at most 20; `problems_omitted` counts the rest) unless `--all` is passed. Report each `warn` and `fail` with its `detail` and `fix`; say nothing more for `ok` checks. Fixes name skill requests: `/nebula install CHILD` maps to `install --root PARENT --project CHILD --host HOST` (preview with `--dry-run` first), `/nebula uninstall CHILD --host HOST` maps to `uninstall`, and `/nebula maintain` maps to `maintain`. Apply a fix only when the user asks. Doctor cannot see host trust decisions; if every check passes but hooks still do not fire, follow the host's native trust review in [integration](references/integration.md).
+
 ## Stats
 
 For “nebula stats”, invoke the bundled launcher with `stats --root <requested-ancestor> --open`. The ancestor may contain multiple independent Nebulas; default to the current folder if none is named. Reporting requires no initialization, installation or ON. It reads old state without migration and reports unavailable roots separately. Return the output path, coverage and concise warnings; keep full lesson data in the HTML. Tracked counts start at analytics initialization; retained history is partial. Successful applications are recorded outcomes, not saved minutes. See [analytics semantics](references/analytics.md). Use `--output <new-file.html>` for a requested location; never overwrite an existing report.

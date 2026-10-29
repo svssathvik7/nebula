@@ -230,7 +230,8 @@ Start a **fresh Claude Code or Codex session inside a selected project**, review
 project and hook trust through the host's native flow, and invoke the Nebula
 skill (`/nebula` in Claude Code). Follow the
 [host integration guide](skills/nebula/references/integration.md) if skills or
-hooks are not discovered.
+hooks are not discovered. Run `/nebula doctor` first: it
+[checks the setup](#check-your-setup) and names a fix for each problem.
 
 You can also ask your agent to do the setup. Before the skill is installed,
 give it the absolute path to this checkout's `skills/nebula/SKILL.md` and name
@@ -317,6 +318,7 @@ Useful commands, using the variables from setup:
 | Check current mode with bounded output | `python3 "$NEBULA_ENGINE" status --summary --root "$NEBULA_ROOT"` |
 | Run retention and storage maintenance | `python3 "$NEBULA_ENGINE" maintain --root "$NEBULA_ROOT"` |
 | Generate an HTML analytics report | `python3 "$NEBULA_ENGINE" stats --root "$NEBULA_ROOT" --open` |
+| Check setup and get a fix for each problem | `python3 "$NEBULA_ENGINE" doctor --root "$NEBULA_ROOT"` |
 | See available commands | `python3 "$NEBULA_ENGINE" --help` |
 
 To remove a host's registration from a selected project:
@@ -329,6 +331,38 @@ python3 "$NEBULA_ENGINE" uninstall --root "$NEBULA_ROOT" \
 Repeat for other projects and hosts as needed. Uninstall removes unchanged
 Nebula-owned registrations, leaves modified entries in place and reports them,
 and keeps learned state.
+
+### Check your setup
+
+If Nebula seems inactive, ask your agent for `/nebula doctor`. It checks the
+setup without changing anything and gives a fix for each problem:
+
+```text
+✗ claude in api   Skill link points to ~/old/nebula/skills/nebula, which no longer has SKILL.md;
+                  hook script ~/old/nebula/scripts/nebula_hook.py no longer exists.
+                  Fix: /nebula uninstall api --host claude, then /nebula install api --host claude.
+! project worker  Nebula is not installed here for any host.
+                  Fix: /nebula install worker
+! mode            Nebula is off: nothing is captured or applied.
+                  Fix: /nebula on
+```
+
+| Check | What it looks for |
+| --- | --- |
+| config | `.nebula/config.json` exists and is valid |
+| state | The database opens, passes an integrity check, is writable and has storage room |
+| mode | Nebula is not off |
+| project | Each selected project folder still exists and has Nebula installed for at least one host |
+| host in project | The skill link resolves, every Nebula hook is still registered, and the Python interpreter and hook script it calls still exist. Installs from another checkout are flagged. |
+| interrupted install | No install was left half-finished |
+
+The utility command is `python3 "$NEBULA_ENGINE" doctor --root "$NEBULA_ROOT"`.
+It prints JSON listing only the problems, failures first and at most 20, with
+passing checks counted in `summary`; add `--all` to list every check. It exits 1
+when any check fails. Doctor cannot see host trust
+decisions. If every check passes but hooks still don't fire, review project and
+hook trust in the host, as described in the
+[host integration guide](skills/nebula/references/integration.md).
 
 ### Multi-Nebula stats
 
