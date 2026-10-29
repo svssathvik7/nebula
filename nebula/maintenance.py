@@ -19,9 +19,13 @@ def usage_bytes(root):
             for entry in entries:
                 scanned+=1
                 if scanned>10000 or entry.is_symlink(): raise StateUnavailable('unbounded or symlinked nebula storage')
-                if entry.is_dir(follow_symlinks=False): pending.append(Path(entry.path))
-                elif entry.is_file(follow_symlinks=False): total+=entry.stat(follow_symlinks=False).st_size
-                else: raise StateUnavailable('unsupported nebula state entry')
+                # SQLite deletes -wal/-shm when the last connection closes, so an
+                # entry can vanish mid-scan; that is not a full or broken store.
+                try:
+                    if entry.is_dir(follow_symlinks=False): pending.append(Path(entry.path))
+                    elif entry.is_file(follow_symlinks=False): total+=entry.stat(follow_symlinks=False).st_size
+                    elif os.path.lexists(entry.path): raise StateUnavailable('unsupported nebula state entry')
+                except FileNotFoundError: continue
     return total
 
 def capacity_state(root):
@@ -59,7 +63,9 @@ def prune(store,now):
             db.execute('DELETE FROM suggestions WHERE id=?',(row['id'],))
     return {'raw_cutoff':raw_cutoff,'sample_cutoff':sample_cutoff}
 
-def maintain(root,*,now):
+def maintain(root,*,now,blocking=True):
+    """Prune and checkpoint. Non-blocking runs (from hooks) use a PASSIVE
+    checkpoint and skip VACUUM, so they never hold other writers back."""
     root=Path(root).resolve(); timestamp(now)
     with Store(root) as store:
         before=store.status()
@@ -67,11 +73,12 @@ def maintain(root,*,now):
             cutoffs=prune(store,now)
             store.set_meta('last-maintenance',now)
         after=store.status()
-        checkpoint=tuple(store.connection.execute('PRAGMA wal_checkpoint(TRUNCATE)').fetchone())
+        mode='TRUNCATE' if blocking else 'PASSIVE'
+        checkpoint=tuple(store.connection.execute(f'PRAGMA wal_checkpoint({mode})').fetchone())
         compacted=False
         pages=store.connection.execute('PRAGMA page_count').fetchone()[0]
         free=store.connection.execute('PRAGMA freelist_count').fetchone()[0]
-        if free>256 and free>pages//4 and checkpoint[0]==0:
+        if blocking and free>256 and free>pages//4 and checkpoint[0]==0:
             try:
                 store.connection.execute('VACUUM'); compacted=True
                 checkpoint=tuple(store.connection.execute('PRAGMA wal_checkpoint(TRUNCATE)').fetchone())
@@ -83,7 +90,8 @@ def session_maintenance(root,session_id):
         seen=store.get_meta('maintenance-sessions',[])
         soft=capacity_state(root)=='soft-limit'
         if session_id in seen and not soft: return
-    maintain(root,now=utcnow())
+    # Near the storage limit, reclaiming space is worth briefly blocking writers.
+    maintain(root,now=utcnow(),blocking=soft)
     with Store(root) as store:
         with store.transaction():
             seen=store.get_meta('maintenance-sessions',[])

@@ -112,5 +112,5 @@ def main(argv=None):
                         operation={'claim':application.claim_application,'finish':application.finish_application,'review':application.review_application}[args.operation]
                         result={'result':operation(store,**input_json())}
         sys.stdout.write(dump(result)+'\n'); return 0
-    except (OSError,ValueError,TypeError,KeyError,sqlite3.Error,StateUnavailable) as exc:
+    except (OSError,ValueError,TypeError,KeyError,RecursionError,sqlite3.Error,StateUnavailable) as exc:
         sys.stderr.write(dump({'error':type(exc).__name__,'message':str(exc)})+'\n'); return 1
