@@ -26,6 +26,7 @@ def parser():
     p=argparse.ArgumentParser(description='Nebula: shared session learning for Claude and Codex')
     sub=p.add_subparsers(dest='command',required=True)
     init=sub.add_parser('init'); init.add_argument('directory',type=Path); init.add_argument('--project',action='append',required=True,type=Path)
+    doctor=sub.add_parser('doctor',help='Check setup and print a fix for each problem'); doctor.add_argument('--root',type=Path); doctor.add_argument('--all',action='store_true',help='List passing checks too')
     stats=sub.add_parser('stats',help='Generate a local multi-nebula analytics report')
     stats.add_argument('--root',type=Path)
     stats.add_argument('--output',type=Path)
@@ -77,6 +78,12 @@ def stats_result(args):
 def main(argv=None):
     args=parser().parse_args(argv)
     try:
+        if args.command=='doctor':
+            from .doctor import doctor,find_root
+            root=args.root.resolve(strict=True) if args.root else find_root(Path.cwd())
+            if root is None: raise ValueError('no nebula found here or in any parent folder; pass --root')
+            result=doctor(root,runtime=RUNTIME,all_checks=args.all)
+            sys.stdout.write(dump(result)+'\n'); return 0 if result['ok'] else 1
         if args.command=='stats': result=stats_result(args)
         elif args.command=='init': result=asdict(init_nebula(args.directory,args.project))
         else:
