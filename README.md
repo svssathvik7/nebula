@@ -194,7 +194,8 @@ python3 "$NEBULA_ENGINE" init "$NEBULA_ROOT" \
 
 This creates local state in `projects/.nebula/`, initially OFF. Initialization
 refuses to overwrite an existing Nebula; for one already set up, use `status`
-and `on` instead.
+and `on` instead. To change which projects are selected later, see
+[adding and removing projects](#add-or-remove-projects).
 
 ### 3. Connect your coding agents and turn it on
 
@@ -331,6 +332,30 @@ python3 "$NEBULA_ENGINE" uninstall --root "$NEBULA_ROOT" \
 Repeat for other projects and hosts as needed. Uninstall removes unchanged
 Nebula-owned registrations, leaves modified entries in place and reports them,
 and keeps learned state.
+
+### Add or remove projects
+
+Your project list can change without starting over. Ask your agent:
+
+| Skill request | What happens |
+| --- | --- |
+| `/nebula add billing` | Selects `billing`, then installs Nebula there. Lessons, evidence and mode are kept. |
+| `/nebula remove old-app` | Uninstalls Nebula from `old-app`, then deselects it. Lessons are kept. |
+
+The equivalent utility commands are:
+
+```sh
+python3 "$NEBULA_ENGINE" add-project --root "$NEBULA_ROOT" --project "$NEBULA_ROOT/billing"
+python3 "$NEBULA_ENGINE" remove-project --root "$NEBULA_ROOT" --project "$NEBULA_ROOT/old-app"
+```
+
+After `add-project`, run `install` for the new project as in
+[setup step 3](#3-connect-your-coding-agents-and-turn-it-on). `remove-project`
+refuses while the project still has Nebula registrations, so run `uninstall`
+first. It also refuses to remove the last project; use `off` to pause instead.
+Removing a project whose folder is already deleted works. Lessons that were
+scoped only to removed projects are listed in the output so you can decide
+whether to withdraw them.
 
 ### Check your setup
 

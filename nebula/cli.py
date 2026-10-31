@@ -4,7 +4,7 @@ from pathlib import Path
 from .models import dump,utcnow,load,Sample
 from .store import Store,StateUnavailable
 from .roots import resolve_context,read_config
-from .lifecycle import init_nebula,set_mode
+from .lifecycle import init_nebula,set_mode,add_projects,remove_projects
 from .capture import capture_event
 from .lessons import record_lesson,record_sample
 from .feedback import suggest,apply_feedback,VERDICTS
@@ -31,7 +31,7 @@ def parser():
     stats.add_argument('--root',type=Path)
     stats.add_argument('--output',type=Path)
     stats.add_argument('--open',action='store_true',help='Open the saved report in your browser')
-    for name in ('on','off','mode','status','observe','record-lesson','record-sample','recall','suggest','feedback','inspect','application','install','uninstall','maintain','confirm','attest','review'):
+    for name in ('on','off','mode','status','observe','record-lesson','record-sample','recall','suggest','feedback','inspect','application','install','uninstall','add-project','remove-project','maintain','confirm','attest','review'):
         cmd=sub.add_parser(name); cmd.add_argument('--root',type=Path)
         if name in ('record-lesson','record-sample','suggest','application'): cmd.add_argument('--stdin',action='store_true',required=True)
         if name=='observe': cmd.add_argument('--host',required=True,choices=('claude','codex'))
@@ -39,6 +39,7 @@ def parser():
         if name=='status': cmd.add_argument('--summary',action='store_true',help='Return only current mode and enabled state for automatic checks')
         if name=='mode': cmd.add_argument('mode',choices=('off','observe','full'))
         if name=='recall': cmd.add_argument('--project',required=True,type=Path); cmd.add_argument('--query',required=True)
+        if name in ('add-project','remove-project'): cmd.add_argument('--project',action='append',required=True,type=Path)
         if name in ('install','uninstall'):
             cmd.add_argument('--project',action='append',required=True,type=Path); cmd.add_argument('--host',action='append',required=True,choices=('claude','codex'))
             if name=='install': cmd.add_argument('--dry-run',action='store_true')
@@ -101,6 +102,8 @@ def main(argv=None):
             elif args.command=='install':
                 changes=plan_install(root,args.project,args.host,RUNTIME)
                 result={'changes':changes} if args.dry_run else install(changes)
+            elif args.command=='add-project': result=add_projects(root,args.project)
+            elif args.command=='remove-project': result=remove_projects(root,args.project)
             elif args.command=='uninstall': result={'results':[uninstall(root,project,host) for project in args.project for host in args.host]}
             elif args.command=='maintain':
                 from .maintenance import maintain
